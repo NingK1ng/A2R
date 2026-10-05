@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101114">
+    <meta name="description" content="A2R is a source-bounded evaluation framework for measuring and reducing source-resolution distortion in LLM output arbitration.">
+    <meta property="og:title" content="A2R | Source-Resolution Distortion">
+    <meta property="og:description" content="Resolve, then aggregate: a source-bounded framework for auditable LLM output arbitration.">
+    <meta property="og:type" content="website">
+    <title>A2R | Source-Resolution Distortion</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23101114'/%3E%3Cpath d='M17 17h30v8H25v7h17v8H25v15h-8z' fill='%23f2a33b'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="#top" aria-label="A2R home">
+          <span class="brand-mark">A<sup>2</sup>R</span>
+          <span class="brand-meta">EMNLP project site</span>
+        </a>
+        <nav class="site-nav" aria-label="Primary navigation">
+          <a href="#about">About</a>
+          <a href="#method">Method</a>
+          <a href="#evidence">Evidence</a>
+          <a href="#code">Code</a>
+          <a href="#dataset">Dataset</a>
+          <a href="#paper">Paper</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero section-shell" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="eyebrow-dot"></span> Auditable Arbitration for Resolution</p>
+          <h1 id="hero-title">When an answer is not wrong, but the reason is gone.</h1>
+          <p class="hero-lead">A2R measures and reduces <em>source-resolution distortion</em> in LLM output arbitration: the irreversible loss or incorrect mapping of task-relevant source structure when several candidate answers become one.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#method">Explore the method</a>
+            <a class="button button-quiet" href="/assets/A2R-CR.pdf" target="_blank" rel="noopener">Read the paper</a>
+          </div>
+          <div class="author-line">
+            <span>Jinning Zhang<sup>1,*</sup></span>
+            <span>Yeqiang Wang<sup>2,3,*</sup></span>
+            <span>Yulong Zhang<sup>2,4,*,†</sup></span>
+            <span>Xuanbo Su<sup>5,†</sup></span>
+          </div>
+          <p class="affiliations"><sup>1</sup> Beijing Sport University · <sup>2</sup> Shanghai Innovation Institute · <sup>3</sup> Shanghai Jiao Tong University · <sup>4</sup> Fudan University · <sup>5</sup> Bairong Inc.</p>
+        </div>
+
+        <figure class="hero-figure">
+          <div class="figure-label"><span>Figure 01</span><span>Resolve, then aggregate</span></div>
+          <img src="/assets/a2r-pipeline.png" alt="A2R pipeline showing query and candidate outputs flowing through unit extraction, a compact decision ledger, deterministic source-tagged rendering, and a traceable final answer." width="4899" height="2517">
+          <figcaption>Source units are preserved before arbitration is compressed into a final answer.</figcaption>
+        </figure>
+      </section>
+
+      <section class="signal-strip" aria-label="Key results">
+        <div><strong>0.16</strong><span>CER with A2R-Decision</span></div>
+        <div><strong>0.67</strong><span>Prov-H with A2R-Decision</span></div>
+        <div><strong>520</strong><span>pairwise main-set cases</span></div>
+        <div><strong>51–53%</strong><span>preference against structured baselines</span></div>
+      </section>
+
+      <section id="about" class="content-section section-shell">
+        <div class="section-kicker">01 / About</div>
+        <div class="section-content about-grid">
+          <div>
+            <h2>Arbitration is a compression problem.</h2>
+            <p class="large-copy">LLM-as-a-Judge systems often produce a plausible final answer by merging, rewriting, or selecting among candidate outputs. Plausibility alone does not tell us whether the relationships that supported the answer survived.</p>
+            <p>A2R fixes a query-conditioned reference structure before arbitration, then asks whether source units, conflicts, provenance, caveats, and local relations remain recoverable in the final output.</p>
+          </div>
+          <aside class="concept-card" aria-label="Source-resolution distortion definition">
+            <div class="concept-line"><span class="concept-index">01</span><span>Candidate sources</span><b>distinct</b></div>
+            <div class="concept-arrow">↓</div>
+            <div class="concept-line"><span class="concept-index">02</span><span>Arbitration</span><b>compressed</b></div>
+            <div class="concept-arrow">↓</div>
+            <div class="concept-line concept-line-emphasis"><span class="concept-index">03</span><span>Final answer</span><b>recoverable?</b></div>
+            <p class="concept-note">A correct-looking sentence can still erase a conflict, detach a caveat, or misattribute a claim.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section id="method" class="content-section section-shell section-tinted">
+        <div class="section-kicker">02 / Method</div>
+        <div class="section-content">
+          <div class="section-intro">
+            <h2>A sparse ledger before a fluent answer.</h2>
+            <p>A2R-Decision makes the local resolution state explicit before final generation. The ordering matters: extract first, resolve second, render last.</p>
+          </div>
+          <div class="stage-grid">
+            <article class="stage-card stage-green">
+              <div class="stage-top"><span>Stage 1</span><span class="stage-letter">E</span></div>
+              <h3>Unit extraction</h3>
+              <p>Read the query and candidates, then preserve query-relevant claims, conditions, caveats, evidence, and recommendations as source units.</p>
+              <div class="stage-foot">source ID · span · attributes</div>
+            </article>
+            <article class="stage-card stage-blue">
+              <div class="stage-top"><span>Stage 2</span><span class="stage-letter">L</span></div>
+              <h3>Decision ledger</h3>
+              <p>Record the relation between units and the operation it licenses: merge, condition, drop, or report unresolved.</p>
+              <div class="stage-foot">relation · operation · provenance</div>
+            </article>
+            <article class="stage-card stage-purple">
+              <div class="stage-top"><span>Stage 3</span><span class="stage-letter">G</span></div>
+              <h3>Tagged rendering</h3>
+              <p>Serialize ledger claims with deterministic ordering, caveat scope, and source-aware tags. No extra free rewriting is required.</p>
+              <div class="stage-foot">organize · render · attach tags</div>
+            </article>
+          </div>
+          <div class="formula-row" aria-label="A2R process notation">
+            <span>(q, A, B)</span><b>→</b><span class="formula-green">Û</span><b>→</b><span class="formula-blue">L̂</span><b>→</b><span class="formula-purple">ŷ</span>
+            <small>extract · ledger · generate</small>
+          </div>
+        </div>
+      </section>
+
+      <section id="evidence" class="content-section section-shell">
+        <div class="section-kicker">03 / Evidence</div>
+        <div class="section-content evidence-grid">
+          <div>
+            <h2>Preference is not recoverability.</h2>
+            <p class="large-copy">Two answers can be similarly preferred while differing sharply in whether a reader can reconstruct the source-side decision.</p>
+            <p>The framework separates primary fidelity metrics from safety diagnostics and mechanism analysis.</p>
+            <div class="metric-list" aria-label="A2R metrics">
+              <div><span class="metric-code">CER</span><span>conflict erasure</span></div>
+              <div><span class="metric-code">FCR</span><span>false conflict</span></div>
+              <div><span class="metric-code">UAR</span><span>unsupported addition</span></div>
+              <div><span class="metric-code">Prov-H</span><span>provenance recoverability</span></div>
+              <div><span class="metric-code">CPR</span><span>caveat preservation</span></div>
+              <div><span class="metric-code">RF*</span><span>relation fidelity</span></div>
+            </div>
+          </div>
+          <div class="results-panel">
+            <div class="results-heading"><span>Final-only fidelity</span><span>↓ lower is better · ↑ higher is better</span></div>
+            <div class="result-row result-header"><span>System</span><span>CER ↓</span><span>Prov-H ↑</span></div>
+            <div class="result-row"><span>Checklist Prompt</span><strong>0.23</strong><strong>0.45</strong></div>
+            <div class="result-row"><span>Post-hoc Attribution</span><strong>0.24</strong><strong>0.52</strong></div>
+            <div class="result-row"><span>A2R-Heuristic</span><strong>0.19</strong><strong>0.60</strong></div>
+            <div class="result-row result-highlight"><span>A2R-Decision</span><strong>0.16</strong><strong>0.67</strong></div>
+            <p class="results-note">Main-set comparison across 520 pairwise cases. A2R-Decision improves both conflict preservation and provenance recoverability at 1.44× Checklist Prompt token cost.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="code" class="content-section section-shell section-tinted">
+        <div class="section-kicker">04 / Code</div>
+        <div class="section-content code-grid">
+          <div>
+            <h2>Artifacts will live here.</h2>
+            <p class="large-copy">The project page is ready for the code release, prompts, ledger schemas, and evaluation scripts.</p>
+            <p>The paper does not specify a public code repository yet, so this prototype keeps the slot explicit instead of inventing a link.</p>
+          </div>
+          <div class="release-card">
+            <span class="release-status">Release slot</span>
+            <h3>Code and evaluation scripts</h3>
+            <p>Repository link to be added when the artifact is public.</p>
+            <span class="button button-disabled" aria-disabled="true">Coming soon</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="dataset" class="content-section section-shell">
+        <div class="section-kicker">05 / Dataset</div>
+        <div class="section-content">
+          <div class="dataset-head">
+            <div>
+              <h2>A benchmark for source-bounded arbitration.</h2>
+              <p class="large-copy">The benchmark fixes gold source structures before system execution, so evaluation can focus on what arbitration preserved, erased, or mapped incorrectly.</p>
+            </div>
+            <a class="button button-primary" href="https://huggingface.co/datasets/Ning311/A2R-Benchmark" target="_blank" rel="noopener">Open dataset</a>
+          </div>
+          <div class="dataset-grid">
+            <article><strong>320</strong><span>controlled diagnostic cases</span></article>
+            <article><strong>200</strong><span>natural pairwise cases</span></article>
+            <article><strong>150</strong><span>query-contrast groups</span></article>
+            <article><strong>200</strong><span>three-candidate checks</span></article>
+          </div>
+          <p class="dataset-note">The released artifacts exclude annotator identities, raw annotator logs, account metadata, and identifying free-text notes.</p>
+        </div>
+      </section>
+
+      <section id="paper" class="content-section section-shell section-paper">
+        <div class="section-kicker">06 / Paper</div>
+        <div class="section-content paper-grid">
+          <div class="paper-preview">
+            <img src="/assets/paper-first-page.png" alt="First page of the A2R paper" width="993" height="1405">
+          </div>
+          <div class="paper-copy">
+            <p class="paper-label">Measuring Source-Resolution Distortion in LLM Output Arbitration</p>
+            <h2>A Source-Bounded Evaluation Framework</h2>
+            <p>Jinning Zhang, Yeqiang Wang, Yulong Zhang, and Xuanbo Su.</p>
+            <div class="paper-actions">
+              <a class="button button-primary" href="/assets/A2R-CR.pdf" target="_blank" rel="noopener">View PDF</a>
+              <a class="button button-quiet" href="/assets/A2R-CR.pdf" download="A2R-CR.pdf">Download PDF</a>
+            </div>
+            <div class="citation-block">
+              <div class="citation-heading"><span>BibTeX</span><button id="copy-citation" type="button">Copy</button></div>
+              <pre id="citation">@inproceedings{zhang2026a2r,
+  title     = {Measuring Source-Resolution Distortion in LLM Output Arbitration: A Source-Bounded Evaluation Framework},
+  author    = {Zhang, Jinning and Wang, Yeqiang and Zhang, Yulong and Su, Xuanbo},
+  booktitle = {Proceedings of EMNLP},
+  year      = {2026}
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="poster-section section-shell" aria-labelledby="poster-title">
+        <div class="poster-card">
+          <div>
+            <p class="section-kicker">For posters</p>
+            <h2 id="poster-title">Scan to enter the project site.</h2>
+            <p>Use the SVG download for print. The QR code points to the public project URL.</p>
+            <a class="text-link" href="/assets/qr-code.svg" download="a2r-project-qr.svg">Download QR code</a>
+          </div>
+          <div class="qr-frame"><img src="/assets/qr-code.svg" alt="QR code for the A2R project site" width="240" height="240"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer section-shell">
+      <div><span class="footer-mark">A<sup>2</sup>R</span><span>EMNLP project site · 2026</span></div>
+      <div><a href="https://github.com/NingK1ng" target="_blank" rel="noopener">Jinning Zhang</a><span>·</span><a href="https://huggingface.co/datasets/Ning311/A2R-Benchmark" target="_blank" rel="noopener">Dataset</a></div>
+    </footer>
+    <script src="/main.js" defer></script>
+  </body>
+</html>
