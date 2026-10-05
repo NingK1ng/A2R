@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#101114">
-    <meta name="description" content="A2R is a source-bounded evaluation framework for measuring and reducing source-resolution distortion in LLM output arbitration.">
+    <meta name="description" content="A2R measures source-resolution distortion in LLM output arbitration with a source-bounded framework.">
     <meta property="og:title" content="A2R | Source-Resolution Distortion">
-    <meta property="og:description" content="Resolve, then aggregate: a source-bounded framework for auditable LLM output arbitration.">
+    <meta property="og:description" content="A source-bounded framework for measuring source-resolution distortion in LLM output arbitration.">
     <meta property="og:type" content="website">
     <title>A2R | Source-Resolution Distortion</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23101114'/%3E%3Cpath d='M17 17h30v8H25v7h17v8H25v15h-8z' fill='%23f2a33b'/%3E%3C/svg%3E">
@@ -33,11 +33,11 @@
     <main id="top">
       <section class="hero section-shell" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow"><span class="eyebrow-dot"></span> Auditable Arbitration for Resolution</p>
-          <h1 id="hero-title">When an answer is not wrong, but the reason is gone.</h1>
-          <p class="hero-lead">A2R measures and reduces <em>source-resolution distortion</em> in LLM output arbitration: the irreversible loss or incorrect mapping of task-relevant source structure when several candidate answers become one.</p>
+          <p class="eyebrow"><span class="eyebrow-dot"></span> Source-bounded LLM arbitration</p>
+          <h1 id="hero-title">When a plausible answer loses its source structure.</h1>
+          <p class="hero-lead">A2R measures <em>source-resolution distortion</em> in LLM output arbitration. Distortion appears when answer merging erases task-relevant source structure or assigns the wrong relation.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#method">Explore the method</a>
+            <a class="button button-primary" href="#method">Read the method</a>
             <a class="button button-quiet" href="assets/A2R-CR.pdf" target="_blank" rel="noopener">Read the paper</a>
           </div>
           <div class="author-line">
@@ -50,9 +50,9 @@
         </div>
 
         <figure class="hero-figure">
-          <div class="figure-label"><span>Figure 01</span><span>Resolve, then aggregate</span></div>
+          <div class="figure-label"><span>Figure 01</span><span>Resolve source structure</span></div>
           <img src="assets/a2r-pipeline.png" alt="A2R pipeline showing query and candidate outputs flowing through unit extraction, a compact decision ledger, deterministic source-tagged rendering, and a traceable final answer." width="4899" height="2517">
-          <figcaption>Source units are preserved before arbitration is compressed into a final answer.</figcaption>
+          <figcaption>Source units are resolved before the final answer is rendered.</figcaption>
         </figure>
       </section>
 
@@ -60,7 +60,7 @@
         <div><strong>0.16</strong><span>CER with A2R-Decision</span></div>
         <div><strong>0.67</strong><span>Prov-H with A2R-Decision</span></div>
         <div><strong>520</strong><span>pairwise main-set cases</span></div>
-        <div><strong>51–53%</strong><span>preference against structured baselines</span></div>
+        <div><strong>51–53%</strong><span>answer-preference score</span></div>
       </section>
 
       <section id="about" class="content-section section-shell">
@@ -68,17 +68,17 @@
         <div class="section-content">
           <div class="section-intro problem-intro">
             <div>
-              <h2>A reasonable synthesis can still erase the decision.</h2>
-              <p class="large-copy">The paper starts with a concrete multi-agent question, not with a metric: <em>Can a U.S. AI medical-record product enter the Chinese market directly?</em></p>
+              <h2>Fluent synthesis can erase a decision relation.</h2>
+              <p class="large-copy">The paper opens with a concrete multi-agent question: <em>Can a U.S. AI medical-record product enter the Chinese market directly?</em></p>
             </div>
-            <p>The point is not whether the final sentence sounds fluent. It is whether the source-side relation that made the decision meaningful remains recoverable after arbitration.</p>
+            <p>The test is source recoverability after arbitration: does the relation that supports the decision survive?</p>
           </div>
 
           <div class="problem-story" aria-label="Opening example from the paper">
             <article class="story-step story-query">
               <div class="story-index">01 / QUERY</div>
               <h3>One question, two candidate resolutions.</h3>
-              <p>Multiple agents investigate the same market-entry decision and return answers that carry different kinds of structure.</p>
+              <p>Multiple agents examine the same market-entry decision. Their answers carry different source relations.</p>
             </article>
             <article class="story-step story-source story-source-a">
               <div class="story-index">02 / CANDIDATE A</div>
@@ -101,7 +101,7 @@
             <div>
               <div class="bridge-label">WHAT CHANGED?</div>
               <h3>A prerequisite became a process reminder.</h3>
-              <p>The arbitration result is not plainly false. But it no longer preserves the dependency that product classification determines the regulatory pathway. The two ideas are mentioned; the relation between them has been aliased.</p>
+              <p>The arbitration result reads as a sensible instruction. It drops the dependency between product classification and the regulatory pathway. The text retains both ideas while losing the relation that connects them.</p>
             </div>
             <aside class="concept-card" aria-label="Source-resolution distortion definition">
               <div class="concept-line"><span class="concept-index">01</span><span>Source-side structure</span><b>distinct</b></div>
@@ -109,14 +109,14 @@
               <div class="concept-line"><span class="concept-index">02</span><span>Arbitration</span><b>compressed</b></div>
               <div class="concept-arrow">↓</div>
               <div class="concept-line concept-line-emphasis"><span class="concept-index">03</span><span>Final answer</span><b>relation lost</b></div>
-              <p class="concept-note">A2R calls this source-resolution distortion: the irreversible loss or incorrect mapping of task-relevant source-side structure during arbitration.</p>
+              <p class="concept-note">Source-resolution distortion is the irreversible loss or incorrect mapping of task-relevant source structure during arbitration.</p>
             </aside>
           </div>
 
           <div class="question-callout">
             <div class="bridge-label">THE RESEARCH QUESTION</div>
-            <p>When an LLM compresses multiple candidate outputs into one result, how can we measure the distortion of task-relevant source structure - and how can we reduce it?</p>
-            <span>That question motivates both the source-bounded measurement framework and the A2R method below.</span>
+            <p>When an LLM compresses multiple candidate outputs into one result, what evidence shows that task-relevant source structure survived? Which controls reduce distortion?</p>
+            <span>This question defines the measurement framework and the A2R method.</span>
           </div>
         </div>
       </section>
@@ -126,10 +126,10 @@
         <div class="section-content">
           <div class="section-intro">
             <div>
-              <h2>Protect the resolution structure before compressing the answer.</h2>
-              <p class="large-copy">A2R-Decision changes the object that the final generator is allowed to rewrite. It does not ask an LLM to remember a hidden checklist; it makes the local resolution state explicit, then renders only claims authorized by that state.</p>
+              <h2>Source resolution before final rendering.</h2>
+              <p class="large-copy">A2R-Decision gives the generator an explicit resolution state. The generator renders claims with their source roles and caveat scope attached.</p>
             </div>
-            <p>In the pairwise setting, the resolver maps a query and two candidate outputs to a compact result. The method separates extraction, local resolution, and final rendering so each source of distortion can be inspected.</p>
+            <p>For a query and two candidates, the resolver builds a compact decision record. Extraction, local resolution, and final rendering remain separate, which makes each stage inspectable.</p>
           </div>
 
           <div class="method-definition">
@@ -138,7 +138,7 @@
               <h3>Arbitration is a compression map.</h3>
               <p>For <code>x = (q, A, B)</code>, the system must decide which source units matter, how they relate under the query, and what the final answer is licensed to claim. The same framework extends to three candidates by adding <code>U<sub>C</sub></code>.</p>
               <div class="equation-block"><span>F(q, A, B)</span><b>→</b><span class="equation-result">(y&#770;, L&#770;)</span></div>
-              <p class="equation-caption">A2R keeps an optional ledger <code>L&#770;</code> instead of collapsing every decision directly into free-form text.</p>
+              <p class="equation-caption">The optional ledger records each decision before free-form rendering.</p>
             </div>
             <aside class="structure-card">
               <div class="bridge-label">QUERY-CONDITIONED REFERENCE</div>
@@ -156,7 +156,7 @@
             <article class="stage-card stage-green">
               <div class="stage-top"><span>Stage 1 / Extract</span><span class="stage-letter">E</span></div>
               <h3>Query-relevant source units</h3>
-              <p>Read the query and candidate answers, then keep content that may license a final claim: a local claim, evidence statement, recommendation, caveat, constraint, or risk note.</p>
+              <p>Read the query and candidate answers. Keep content that may license a final claim: a local claim, evidence statement, recommendation, caveat, constraint, or risk note.</p>
               <pre class="method-code">uᵢ = (idᵢ, sourceᵢ, textᵢ,
 typeᵢ, flagsᵢ)</pre>
               <div class="stage-foot">preserve source ID · original span · function flags</div>
@@ -172,7 +172,7 @@ cₘ, pₘ)</pre>
             <article class="stage-card stage-purple">
               <div class="stage-top"><span>Stage 3 / Render</span><span class="stage-letter">G</span></div>
               <h3>Ledger-constrained rendering</h3>
-              <p>Generate from the ledger with a deterministic template: order claims, merge adjacent entries on the same topic, add connectives, and inherit caveat scope and provenance.</p>
+              <p>Render the ledger with a deterministic template. Order claims, merge adjacent entries on the same topic, add connectives, and inherit caveat scope and provenance.</p>
               <pre class="method-code">y&#770; = G(L&#770;)</pre>
               <div class="stage-foot">organize · render · attach recoverable tags</div>
             </article>
@@ -183,21 +183,21 @@ cₘ, pₘ)</pre>
           </div>
 
           <div class="operation-grid">
-            <article><span class="operation-code">merge</span><strong>Equivalent or additive</strong><p>Combine compatible units without erasing their source roles.</p></article>
-            <article><span class="operation-code">condition_sources</span><strong>Incompatible but conditioned</strong><p>Keep conditional alternatives when different conclusions are licensed under identifiable conditions.</p></article>
-            <article><span class="operation-code">drop</span><strong>Query-invalid</strong><p>Do not authorize a final claim from a unit that does not answer the query.</p></article>
-            <article><span class="operation-code">report_unresolved</span><strong>No decision criterion</strong><p>State the alternatives and the missing criterion instead of forcing a choice.</p></article>
+            <article><span class="operation-code">merge</span><strong>Equivalent or additive</strong><p>Combine compatible units and retain their source roles.</p></article>
+            <article><span class="operation-code">condition_sources</span><strong>Conditional conflict</strong><p>Retain alternatives when identifiable conditions lead to different conclusions.</p></article>
+            <article><span class="operation-code">drop</span><strong>Query-invalid</strong><p>Exclude query-irrelevant units.</p></article>
+            <article><span class="operation-code">report_unresolved</span><strong>Unresolved criterion</strong><p>Record the alternatives and the missing criterion.</p></article>
           </div>
 
           <div class="ledger-example">
             <div>
               <div class="bridge-label">WHY THE LEDGER MATTERS</div>
               <h3>The opening example rendered from an authorized decision.</h3>
-              <p>The ledger records Candidate A and Candidate B under one decision record, while preserving the prerequisite scope from Candidate B. The final text can be concise without turning a dependency into a vague reminder.</p>
+              <p>The ledger places Candidate A and Candidate B in one decision record. It keeps Candidate B's prerequisite scope attached. The final text stays concise and retains the dependency.</p>
             </div>
             <pre class="ledger-output">[r1][resolution] For non-regulatory matters,
 market, procurement, and technical research can
-proceed in parallel following Candidate A; given
+proceed in parallel following Candidate A. Given
 the prerequisite specified by Candidate B, investigation
 of the regulatory pathway should begin after product
 classification is determined.</pre>
@@ -205,7 +205,7 @@ classification is determined.</pre>
 
           <div class="method-principle">
             <div class="bridge-label">THE DESIGN PRINCIPLE</div>
-            <p>Anti-aliasing protects distinguishable signal components before irreversible downsampling. A2R applies the same ordering intuition to arbitration: preserve the source units and local relations first, then perform the tighter final aggregation.</p>
+            <p>A2R applies an anti-aliasing principle. Distinguishable source units and their local relations remain intact before the answer is shortened.</p>
           </div>
         </div>
       </section>
@@ -215,10 +215,10 @@ classification is determined.</pre>
         <div class="section-content">
           <div class="section-intro">
             <div>
-              <h2>Measure what survives, not just what sounds good.</h2>
-              <p class="large-copy">The gold source structure is fixed before system execution. Evaluation then asks where the structure is lost: during extraction, in the ledger, or while rendering the final answer.</p>
+              <h2>Measure preserved structure and provenance.</h2>
+              <p class="large-copy">The benchmark defines gold source structure before system execution. Scores identify the stage where structure is lost: extraction, ledger construction, or final rendering.</p>
             </div>
-            <p>Final-only and final-plus-trace outputs are scored separately. The framework evaluates source recoverability, not the external truth of the candidate content.</p>
+            <p>Final-only and final-plus-trace outputs are reported separately. The evaluation tracks source recoverability. Candidate-content factuality is a separate property.</p>
           </div>
 
           <div class="measurement-grid">
@@ -230,7 +230,7 @@ classification is determined.</pre>
           <div class="evidence-grid evidence-detail">
             <div>
               <h3>Six observable distortion signals.</h3>
-              <p>The primary metrics are CER and Prov-H. FCR, UAR, and CPR act as safety diagnostics; RF* is reserved for mechanism analysis because relation labels are harder to annotate reliably.</p>
+              <p>CER and Prov-H are the primary metrics. FCR, UAR, and CPR diagnose common failure modes. RF* supports mechanism analysis through query-conditioned relation labels.</p>
               <div class="metric-list" aria-label="A2R metrics">
                 <div><span class="metric-code">CER</span><span>conflict erasure</span></div>
                 <div><span class="metric-code">FCR</span><span>false conflict</span></div>
@@ -247,7 +247,7 @@ classification is determined.</pre>
               <div class="result-row"><span>Post-hoc Attribution</span><strong>0.24</strong><strong>0.55</strong></div>
               <div class="result-row"><span>A2R-Heuristic</span><strong>0.19</strong><strong>0.60</strong></div>
               <div class="result-row result-highlight"><span>A2R-Decision</span><strong>0.16</strong><strong>0.67</strong></div>
-              <p class="results-note">Main-set comparison across 520 pairwise cases. A2R-Decision improves both conflict preservation and provenance recoverability at 1.44× Checklist Prompt token cost.</p>
+              <p class="results-note">Across 520 pairwise cases, A2R-Decision records CER 0.16 and Prov-H 0.67, compared with 0.23 and 0.45 for Checklist Prompt. It uses 1.44× the Checklist Prompt token cost.</p>
             </div>
           </div>
 
@@ -265,13 +265,13 @@ classification is determined.</pre>
         <div class="section-content code-grid">
           <div>
             <h2>Code, prompts, and evaluation.</h2>
-            <p class="large-copy">The A2R repository is the home for the implementation, prompts, ledger schemas, and evaluation scripts.</p>
-            <p>The repository is kept separate from the personal homepage so the project can evolve with its own releases and artifacts.</p>
+            <p class="large-copy">The repository contains the implementation, prompts, ledger schemas, and evaluation scripts.</p>
+            <p>Code and evaluation materials are released together for reproduction.</p>
           </div>
           <div class="release-card">
             <span class="release-status">Project repository</span>
             <h3>Code and evaluation scripts</h3>
-            <p>Source code, prompts, ledger schemas, and evaluation scripts will be released here.</p>
+            <p>Implementation, prompts, ledger schemas, and evaluation scripts.</p>
             <a class="button button-primary" href="https://github.com/NingK1ng/A2R" target="_blank" rel="noopener">Open code repository</a>
           </div>
         </div>
@@ -283,7 +283,7 @@ classification is determined.</pre>
           <div class="dataset-head">
             <div>
               <h2>A benchmark for source-bounded arbitration.</h2>
-              <p class="large-copy">The benchmark fixes gold source structures before system execution, so evaluation can focus on what arbitration preserved, erased, or mapped incorrectly.</p>
+              <p class="large-copy">The benchmark fixes gold source structures before system execution. Evaluation records which relations arbitration preserves, erases, or maps incorrectly.</p>
             </div>
             <a class="button button-primary" href="https://huggingface.co/datasets/Ning311/A2R-Benchmark" target="_blank" rel="noopener">Open dataset</a>
           </div>
@@ -293,7 +293,7 @@ classification is determined.</pre>
             <article><strong>150</strong><span>query-contrast groups</span></article>
             <article><strong>200</strong><span>three-candidate checks</span></article>
           </div>
-          <p class="dataset-note">The released artifacts exclude annotator identities, raw annotator logs, account metadata, and identifying free-text notes.</p>
+          <p class="dataset-note">The release contains no annotator identities, raw annotator logs, account metadata, or identifying free-text notes.</p>
         </div>
       </section>
 
