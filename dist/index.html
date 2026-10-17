@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#101114">
-    <meta name="description" content="A2R measures source-resolution distortion in LLM output arbitration with a source-bounded framework.">
-    <meta property="og:title" content="A2R | Source-Resolution Distortion">
-    <meta property="og:description" content="A source-bounded framework for measuring source-resolution distortion in LLM output arbitration.">
+    <meta name="description" content="Project page for Measuring Source-Resolution Distortion in LLM Output Arbitration (EMNLP 2026), with the A2R-Decision method, its code and the A2R benchmark.">
+    <meta property="og:title" content="A2R: source-resolution distortion in LLM output arbitration">
+    <meta property="og:description" content="A source-bounded benchmark for source-resolution distortion in LLM output arbitration, and the A2R-Decision method.">
     <meta property="og:type" content="website">
-    <title>A2R | Source-Resolution Distortion</title>
+    <title>A2R: source-resolution distortion in LLM output arbitration</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23101114'/%3E%3Cpath d='M17 17h30v8H25v7h17v8H25v15h-8z' fill='%23f2a33b'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="styles.css">
   </head>
@@ -17,12 +17,12 @@
       <div class="header-inner">
         <a class="brand" href="#top" aria-label="A2R home">
           <span class="brand-mark">A<sup>2</sup>R</span>
-          <span class="brand-meta">EMNLP project site</span>
+          <span class="brand-meta">EMNLP 2026</span>
         </a>
         <nav class="site-nav" aria-label="Primary navigation">
           <a href="#about">About</a>
           <a href="#method">Method</a>
-          <a href="#evidence">Evidence</a>
+          <a href="#results">Results</a>
           <a href="#code">Code</a>
           <a href="#dataset">Dataset</a>
           <a href="#paper">Paper</a>
@@ -33,12 +33,12 @@
     <main id="top">
       <section class="hero section-shell" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow"><span class="eyebrow-dot"></span> Source-bounded LLM arbitration</p>
-          <h1 id="hero-title">When a plausible answer loses its source structure.</h1>
-          <p class="hero-lead">A2R measures <em>source-resolution distortion</em> in LLM output arbitration. Distortion appears when answer merging erases task-relevant source structure or assigns the wrong relation.</p>
+          <h1 id="hero-title">Source&#8209;resolution distortion in LLM output arbitration</h1>
+          <p class="hero-lead">When an LLM merges several candidate answers into one, the result can read well and still drop a conflict between the sources or detach a condition from the claim it limits. The paper calls this <em>source-resolution distortion</em>, fixes the source structure of every case before arbitration, and measures how much of it survives.</p>
+          <p class="hero-lead">A2R-Decision has the model read the candidates into claims and stances, then writes the answer from that reading, so every claim keeps its sources and conditions.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#method">Read the method</a>
-            <a class="button button-quiet" href="assets/A2R-CR.pdf" target="_blank" rel="noopener">Read the paper</a>
+            <a class="button button-primary" href="#method">Method</a>
+            <a class="button button-quiet" href="assets/A2R-CR.pdf" target="_blank" rel="noopener">Paper (PDF)</a>
           </div>
           <div class="author-line">
             <span>Jinning Zhang<sup>1,*</sup></span>
@@ -50,263 +50,262 @@
         </div>
 
         <figure class="hero-figure">
-          <div class="figure-label"><span>Figure 01</span><span>Resolve source structure</span></div>
-          <img src="assets/a2r-pipeline.png" alt="A2R pipeline showing query and candidate outputs flowing through unit extraction, a compact decision ledger, deterministic source-tagged rendering, and a traceable final answer." width="4899" height="2517">
-          <figcaption>Source units are resolved before the final answer is rendered.</figcaption>
+          <div class="figure-label"><span>Figure 1</span><span>The paper's opening example</span></div>
+          <div class="figure-panel">
+            <div class="figure-row">
+              <span class="figure-step">Units</span>
+              <ol class="unit-list">
+                <li><b>Q1</b><span>Can a U.S. AI medical-record product enter the Chinese market directly?</span></li>
+                <li class="unit-a"><b>A1</b><span>Market, procurement, and technical checks can proceed in parallel.</span></li>
+                <li class="unit-b"><b>B1</b><span>Product classification must precede selection of the regulatory pathway.</span></li>
+              </ol>
+            </div>
+            <div class="figure-row">
+              <span class="figure-step">Read</span>
+              <p>Order A, B and order B, A give the same reading: A1 and B1 each state a claim of their own, with no condition and no alternatives. Distance between the readings: 0.</p>
+            </div>
+            <div class="figure-row">
+              <span class="figure-step">Relate</span>
+              <p><code>A1, B1</code> additive, merge</p>
+            </div>
+            <div class="figure-row">
+              <span class="figure-step">Write</span>
+              <p class="figure-answer">Candidate A holds that market, procurement, and technical checks can proceed in parallel. Candidate B holds that product classification must precede selection of the regulatory pathway.</p>
+            </div>
+          </div>
+          <figcaption>Output of the released code with deepseek-chat as the reader. The model is called once per candidate order; relations, the selection and the wording are computed.</figcaption>
         </figure>
       </section>
 
-      <section class="signal-strip" aria-label="Key results">
-        <div><strong>0.16</strong><span>CER with A2R-Decision</span></div>
-        <div><strong>0.67</strong><span>Prov-H with A2R-Decision</span></div>
-        <div><strong>520</strong><span>pairwise main-set cases</span></div>
-        <div><strong>51–53%</strong><span>answer-preference score</span></div>
-      </section>
-
       <section id="about" class="content-section section-shell">
-        <div class="section-kicker">01 / About</div>
+        <div class="section-kicker">About</div>
         <div class="section-content">
           <div class="section-intro problem-intro">
             <div>
-              <h2>Fluent synthesis can erase a decision relation.</h2>
-              <p class="large-copy">The paper opens with a concrete multi-agent question: <em>Can a U.S. AI medical-record product enter the Chinese market directly?</em></p>
+              <h2>A merged answer can drop the relation a decision depends on</h2>
+              <p class="large-copy">The paper opens with a multi-agent example. Two agents answer a market-entry question, and an LLM merges their answers.</p>
             </div>
-            <p>The test is source recoverability after arbitration: does the relation that supports the decision survive?</p>
+            <p>The merged answer is a sensible instruction, but the prerequisite stated by one agent is no longer in it.</p>
           </div>
 
           <div class="problem-story" aria-label="Opening example from the paper">
             <article class="story-step story-query">
-              <div class="story-index">01 / QUERY</div>
-              <h3>One question, two candidate resolutions.</h3>
-              <p>Multiple agents examine the same market-entry decision. Their answers carry different source relations.</p>
+              <div class="story-index">Query</div>
+              <p class="story-quote">Can a U.S. AI medical-record product enter the Chinese market directly?</p>
             </article>
             <article class="story-step story-source story-source-a">
-              <div class="story-index">02 / CANDIDATE A</div>
-              <p class="story-quote">“Market, procurement, and technical checks can proceed in parallel.”</p>
-              <span class="story-tag">parallel checks</span>
+              <div class="story-index">Candidate A</div>
+              <p class="story-quote">Market, procurement, and technical checks can proceed in parallel.</p>
             </article>
             <article class="story-step story-source story-source-b">
-              <div class="story-index">03 / CANDIDATE B</div>
-              <p class="story-quote">“Product classification must precede selection of the regulatory pathway.”</p>
-              <span class="story-tag">prerequisite relation</span>
+              <div class="story-index">Candidate B</div>
+              <p class="story-quote">Product classification must precede selection of the regulatory pathway.</p>
             </article>
             <article class="story-step story-arbitration">
-              <div class="story-index">04 / ARBITRATION</div>
-              <p class="story-quote">“Conduct all investigations in parallel while continuing to confirm the regulatory classification.”</p>
-              <span class="story-tag">sounds reasonable</span>
+              <div class="story-index">Merged answer</div>
+              <p class="story-quote">Conduct all investigations in parallel while continuing to confirm the regulatory classification.</p>
             </article>
           </div>
 
           <div class="problem-bridge">
             <div>
-              <div class="bridge-label">WHAT CHANGED?</div>
-              <h3>A prerequisite became a process reminder.</h3>
-              <p>The arbitration result reads as a sensible instruction. It drops the dependency between product classification and the regulatory pathway. The text retains both ideas while losing the relation that connects them.</p>
+              <h3>The prerequisite became a reminder</h3>
+              <p>Product classification and the regulatory pathway both appear in the merged answer, but the dependency between them does not. Candidate B said that the classification determines the pathway; the merged answer only asks to keep confirming the classification while all investigations run in parallel.</p>
             </div>
-            <aside class="concept-card" aria-label="Source-resolution distortion definition">
-              <div class="concept-line"><span class="concept-index">01</span><span>Source-side structure</span><b>distinct</b></div>
-              <div class="concept-arrow">↓</div>
-              <div class="concept-line"><span class="concept-index">02</span><span>Arbitration</span><b>compressed</b></div>
-              <div class="concept-arrow">↓</div>
-              <div class="concept-line concept-line-emphasis"><span class="concept-index">03</span><span>Final answer</span><b>relation lost</b></div>
-              <p class="concept-note">Source-resolution distortion is the irreversible loss or incorrect mapping of task-relevant source structure during arbitration.</p>
+            <aside class="concept-card" aria-label="Definition of source-resolution distortion">
+              <p class="concept-note">Source-resolution distortion is the irreversible loss or incorrect mapping of task-relevant source-side structure in the final output during arbitration.</p>
+              <p class="concept-forms-label">The paper studies five forms:</p>
+              <ul class="concept-forms">
+                <li>conflict erasure and false conflict</li>
+                <li>unsupported addition</li>
+                <li>provenance loss</li>
+                <li>caveat drift</li>
+                <li>relation distortion</li>
+              </ul>
             </aside>
-          </div>
-
-          <div class="question-callout">
-            <div class="bridge-label">THE RESEARCH QUESTION</div>
-            <p>When an LLM compresses multiple candidate outputs into one result, what evidence shows that task-relevant source structure survived? Which controls reduce distortion?</p>
-            <span>This question defines the measurement framework and the A2R method.</span>
           </div>
         </div>
       </section>
 
       <section id="method" class="content-section section-shell section-tinted">
-        <div class="section-kicker">02 / Method</div>
+        <div class="section-kicker">Method</div>
         <div class="section-content">
           <div class="section-intro">
             <div>
-              <h2>Source resolution before final rendering.</h2>
-              <p class="large-copy">A2R-Decision gives the generator an explicit resolution state. The generator renders claims with their source roles and caveat scope attached.</p>
+              <h2>A2R-Decision</h2>
+              <p class="large-copy">The model has one task: reading the candidates into claims and stances. Relations, the choice between readings and the final wording are computed from the readings.</p>
             </div>
-            <p>For a query and two candidates, the resolver builds a compact decision record. Extraction, local resolution, and final rendering remain separate, which makes each stage inspectable.</p>
+            <p>The paper describes SRD in the vocabulary of source separation: misattribution is cross-source leakage, an unsupported addition is an artifact, and a lost relation is structural aliasing. A2R-Decision writes the answer as an informed mixture. For every claim it states which sources hold it and which deny it, so a reader can recover the source structure from the answer alone.</p>
           </div>
 
           <div class="method-definition">
             <div class="method-definition-copy">
-              <div class="bridge-label">PAIRWISE UNIT OF ANALYSIS</div>
-              <h3>Arbitration is a compression map.</h3>
-              <p>For <code>x = (q, A, B)</code>, the system must decide which source units matter, how they relate under the query, and what the final answer is licensed to claim. The same framework extends to three candidates by adding <code>U<sub>C</sub></code>.</p>
-              <div class="equation-block"><span>F(q, A, B)</span><b>→</b><span class="equation-result">(y&#770;, L&#770;)</span></div>
-              <p class="equation-caption">The optional ledger records each decision before free-form rendering.</p>
+              <div class="bridge-label">Objective</div>
+              <h3>The answer should be read the way the candidates are read</h3>
+              <p>A reading <code>R</code> lists the claims the units make, each unit's stance on them (for or against, possibly under a condition) and the claims that are alternative answers. Two readings of a case are compared by <code>d</code>, the number of unit pairs they relate differently. A2R-Decision returns</p>
+              <div class="equation-block"><span>y* = argmin<sub>y</sub> Σ<sub>π</sub> d(R(y), R(πY))</span></div>
+              <p class="equation-caption">π ranges over the cyclic orders in which the candidates Y can be presented.</p>
             </div>
             <aside class="structure-card">
-              <div class="bridge-label">QUERY-CONDITIONED REFERENCE</div>
+              <div class="bridge-label">The paper's reference structure</div>
               <div class="structure-equation">S<sub>q</sub>(x) = (U<sub>A</sub>, U<sub>B</sub>, E<sub>q</sub>, P<sub>q</sub>, Q<sub>q</sub>)</div>
               <ul>
-                <li><strong>U<sub>A</sub>, U<sub>B</sub></strong> - query-relevant source units</li>
-                <li><strong>E<sub>q</sub></strong> - relations between units under the query</li>
-                <li><strong>P<sub>q</sub></strong> - provenance that must remain recoverable</li>
-                <li><strong>Q<sub>q</sub></strong> - caveats and the claims they qualify</li>
+                <li><strong>U<sub>A</sub>, U<sub>B</sub></strong> the numbered sentences of each candidate</li>
+                <li><strong>E<sub>q</sub></strong> relations computed from the stances</li>
+                <li><strong>P<sub>q</sub></strong> the units, and so the sources, behind each stance</li>
+                <li><strong>Q<sub>q</sub></strong> the conditions attached to stances</li>
               </ul>
             </aside>
           </div>
 
           <div class="stage-grid">
             <article class="stage-card stage-green">
-              <div class="stage-top"><span>Stage 1 / Extract</span><span class="stage-letter">E</span></div>
-              <h3>Query-relevant source units</h3>
-              <p>Read the query and candidate answers. Keep content that may license a final claim: a local claim, evidence statement, recommendation, caveat, constraint, or risk note.</p>
-              <pre class="method-code">uᵢ = (idᵢ, sourceᵢ, textᵢ,
-typeᵢ, flagsᵢ)</pre>
-              <div class="stage-foot">preserve source ID · original span · function flags</div>
+              <div class="stage-top"><span>1 Read</span><span>model call</span></div>
+              <h3>Units and reading</h3>
+              <p>The query and each candidate are split into numbered sentences (Q1, A1, B2, ...). One prompt asks for the claims, each unit's stances and the groups of alternative claims. A reading that fails validation is sent back once with the list of problems.</p>
+              <pre class="method-code">R = (claims, stances, alternatives)</pre>
             </article>
             <article class="stage-card stage-blue">
-              <div class="stage-top"><span>Stage 2 / Resolve</span><span class="stage-letter">L</span></div>
-              <h3>Compact decision ledger</h3>
-              <p>For each local judgment, record the units involved, their query-conditioned relation, the licensed claim, the resolution operation, and its provenance category.</p>
-              <pre class="method-code">ℓₘ = (dₘ, Iₘ, rₘ, oₘ,
-cₘ, pₘ)</pre>
-              <div class="stage-foot">decision ID · units · relation · operation · claim · provenance</div>
+              <div class="stage-top"><span>2 Relate</span><span>computed</span></div>
+              <h3>Relations from stances</h3>
+              <p>The relation of every pair of units follows from their stances, in the paper's vocabulary. All relations come from one set of stances, so they cannot contradict each other.</p>
+              <pre class="method-code">rel(u, v) = f(stances(u), stances(v))</pre>
             </article>
             <article class="stage-card stage-purple">
-              <div class="stage-top"><span>Stage 3 / Render</span><span class="stage-letter">G</span></div>
-              <h3>Ledger-constrained rendering</h3>
-              <p>Render the ledger with a deterministic template. Order claims, merge adjacent entries on the same topic, add connectives, and inherit caveat scope and provenance.</p>
-              <pre class="method-code">y&#770; = G(L&#770;)</pre>
-              <div class="stage-foot">organize · render · attach recoverable tags</div>
+              <div class="stage-top"><span>3 Select</span><span>computed</span></div>
+              <h3>Centrotype over orders</h3>
+              <p>The candidates are read once in each cyclic order, and the reading with the smallest total distance to the others is kept. Ties go to alphabetical order, so the answer does not depend on how the candidates were supplied.</p>
+              <pre class="method-code">R̂ = argmin<sub>R</sub> Σ<sub>π</sub> d(R, R<sub>π</sub>)</pre>
+            </article>
+            <article class="stage-card stage-orange">
+              <div class="stage-top"><span>4 Write</span><span>computed</span></div>
+              <h3>Answer with source indices</h3>
+              <p>Each claim becomes one sentence that names the sources holding or denying it, with the condition of each stance. Alternative claims follow one another, introduced by "Alternatively". Readings that differ in which candidate holds or denies a claim, or under which condition, are never written alike.</p>
+              <pre class="method-code">y = W(R̂)</pre>
             </article>
           </div>
-          <div class="formula-row" aria-label="A2R process notation">
-            <span>(q, A, B)</span><b>→</b><span class="formula-green">Û</span><b>→</b><span class="formula-blue">L̂</span><b>→</b><span class="formula-purple">ŷ</span>
-            <small>extract · resolve · constrained generate</small>
+
+          <div class="relation-table" aria-label="Relations computed from stances">
+            <div class="relation-row relation-head"><span>Relation, operation</span><span>When it applies</span></div>
+            <div class="relation-row"><code>conflict, condition</code><span>One unit counts against a claim the other counts for, or the two support different alternatives, and every such clash holds only under a condition.</span></div>
+            <div class="relation-row"><code>conflict, report_unresolved</code><span>The same, with at least one unconditional clash. Both positions are reported and no side is chosen.</span></div>
+            <div class="relation-row"><code>equivalent, merge</code><span>The two units take the same stances. The claim is written once and names both sources.</span></div>
+            <div class="relation-row"><code>subsumes or additive</code><span>The stances of one unit include those of the other, or the units concern different claims. The operation is condition if a shared claim carries a condition, and merge otherwise.</span></div>
+            <div class="relation-row"><code>query_invalid, drop</code><span>A unit with no stance under the query is left out of the answer.</span></div>
           </div>
 
-          <div class="operation-grid">
-            <article><span class="operation-code">merge</span><strong>Equivalent or additive</strong><p>Combine compatible units and retain their source roles.</p></article>
-            <article><span class="operation-code">condition_sources</span><strong>Conditional conflict</strong><p>Retain alternatives when identifiable conditions lead to different conclusions.</p></article>
-            <article><span class="operation-code">drop</span><strong>Query-invalid</strong><p>Exclude query-irrelevant units.</p></article>
-            <article><span class="operation-code">report_unresolved</span><strong>Unresolved criterion</strong><p>Record the alternatives and the missing criterion.</p></article>
-          </div>
-
-          <div class="ledger-example">
+          <div class="example-block">
             <div>
-              <div class="bridge-label">WHY THE LEDGER MATTERS</div>
-              <h3>The opening example rendered from an authorized decision.</h3>
-              <p>The ledger places Candidate A and Candidate B in one decision record. It keeps Candidate B's prerequisite scope attached. The final text stays concise and retains the dependency.</p>
+              <div class="bridge-label">Example</div>
+              <h3>A conditional conflict from the benchmark</h3>
+              <p>Case pair_controlled_conflict_heavy_000. Candidate A: "The primary latency metric improves by 3.1 percentage points. If refund rate rises by more than 2.0 percentage points, do not ship." Candidate B: "Ship because the primary latency metric improved significantly. The refund rate increase may be seasonal noise."</p>
+              <p>Both orders give the same reading. A2 and B1 are in conflict only under A's condition, so the operation is condition.</p>
             </div>
-            <pre class="ledger-output">[r1][resolution] For non-regulatory matters,
-market, procurement, and technical research can
-proceed in parallel following Candidate A. Given
-the prerequisite specified by Candidate B, investigation
-of the regulatory pathway should begin after product
-classification is determined.</pre>
-          </div>
-
-          <div class="method-principle">
-            <div class="bridge-label">THE DESIGN PRINCIPLE</div>
-            <p>A2R applies an anti-aliasing principle. Distinguishable source units and their local relations remain intact before the answer is shortened.</p>
+            <pre class="example-output">Candidate B holds that the team should ship the API gateway migration batch 1 next week. Alternatively, Candidate A holds that the team should not ship the API gateway migration batch 1 next week if refund rate rises by more than 2.0 percentage points. Candidate A holds that the primary latency metric improves by 3.1 percentage points. Candidate B holds that the primary latency metric improved significantly. Candidate B holds that the refund rate increase may be seasonal noise.</pre>
           </div>
         </div>
       </section>
 
-      <section id="evidence" class="content-section section-shell">
-        <div class="section-kicker">03 / Evidence</div>
+      <section id="results" class="content-section section-shell">
+        <div class="section-kicker">Results</div>
         <div class="section-content">
           <div class="section-intro">
             <div>
-              <h2>Measure preserved structure and provenance.</h2>
-              <p class="large-copy">The benchmark defines gold source structure before system execution. Scores identify the stage where structure is lost: extraction, ledger construction, or final rendering.</p>
+              <h2>Results reported in the paper</h2>
+              <p class="large-copy">The main evaluation uses 520 pairwise cases, 320 controlled and 200 natural, whose source structures were fixed before any system was run.</p>
             </div>
-            <p>Final-only and final-plus-trace outputs are reported separately. The evaluation tracks source recoverability. Candidate-content factuality is a separate property.</p>
+            <p>Final-only and final-plus-trace outputs are scored separately. The metrics measure whether the source structure can be recovered from the output; whether the candidates' content is factually correct is a separate question.</p>
           </div>
 
           <div class="measurement-grid">
-            <article><span class="measurement-index">01 / DE</span><h3>Extraction</h3><p>Were the query-relevant units retained from the candidate set?</p></article>
-            <article><span class="measurement-index">02 / DL</span><h3>Ledger</h3><p>Did relations, provenance assignments, and caveat attachments remain explicit?</p></article>
-            <article><span class="measurement-index">03 / DR</span><h3>Rendering</h3><p>Did the final claims preserve the authorized structure and source links?</p></article>
+            <article><span class="measurement-index">D<sub>E</sub></span><h3>Extraction</h3><p>Whether the query-relevant units of the candidates are kept.</p></article>
+            <article><span class="measurement-index">D<sub>L</sub></span><h3>Trace</h3><p>Whether relations, provenance and caveat attachments in the trace match the reference.</p></article>
+            <article><span class="measurement-index">D<sub>R</sub></span><h3>Rendering</h3><p>Whether the final answer keeps the structure and source links of the trace.</p></article>
           </div>
 
           <div class="evidence-grid evidence-detail">
             <div>
-              <h3>Six observable distortion signals.</h3>
-              <p>CER and Prov-H are the primary metrics. FCR, UAR, and CPR diagnose common failure modes. RF* supports mechanism analysis through query-conditioned relation labels.</p>
+              <h3>Six metrics</h3>
+              <p>CER and Prov-H are the primary metrics. FCR, UAR and CPR serve as safety diagnostics. RF* is used only for mechanism analysis, because its relation labels have lower annotator agreement.</p>
               <div class="metric-list" aria-label="A2R metrics">
                 <div><span class="metric-code">CER</span><span>conflict erasure</span></div>
                 <div><span class="metric-code">FCR</span><span>false conflict</span></div>
                 <div><span class="metric-code">UAR</span><span>unsupported addition</span></div>
-                <div><span class="metric-code">Prov-H</span><span>provenance exposure + correctness</span></div>
+                <div><span class="metric-code">Prov-H</span><span>provenance exposure and accuracy</span></div>
                 <div><span class="metric-code">CPR</span><span>caveat preservation</span></div>
                 <div><span class="metric-code">RF*</span><span>query-conditioned relation fidelity</span></div>
               </div>
             </div>
             <div class="results-panel">
-              <div class="results-heading"><span>Final-only fidelity</span><span>↓ lower is better · ↑ higher is better</span></div>
+              <div class="results-heading"><span>Final-only fidelity (Table 3)</span><span>520 pairwise cases</span></div>
               <div class="result-row result-header"><span>System</span><span>CER ↓</span><span>Prov-H ↑</span></div>
               <div class="result-row"><span>Checklist Prompt</span><strong>0.23</strong><strong>0.45</strong></div>
               <div class="result-row"><span>Post-hoc Attribution</span><strong>0.24</strong><strong>0.55</strong></div>
               <div class="result-row"><span>A2R-Heuristic</span><strong>0.19</strong><strong>0.60</strong></div>
               <div class="result-row result-highlight"><span>A2R-Decision</span><strong>0.16</strong><strong>0.67</strong></div>
-              <p class="results-note">Across 520 pairwise cases, A2R-Decision records CER 0.16 and Prov-H 0.67, compared with 0.23 and 0.45 for Checklist Prompt. It uses 1.44× the Checklist Prompt token cost.</p>
+              <p class="results-note">A2R-Decision reaches CER 0.16 and Prov-H 0.67, against 0.23 and 0.45 for Checklist Prompt, at 1.44 times its token cost. In answer preference it is close to parity with the structured baselines (51–53%), so answers that are preferred about equally can still differ in how much source structure they keep.</p>
             </div>
           </div>
 
           <div class="validation-strip">
             <div><strong>0.79</strong><span>blind reconstruction accuracy</span><small>50 held-out cases</small></div>
             <div><strong>0.74</strong><span>decision accuracy</span><small>50 held-out cases</small></div>
-            <div><strong>0.73</strong><span>query-aware RF* macro-F1</span><small>150 query-contrast groups</small></div>
-            <div><strong>0.16</strong><span>three-candidate ordering preserved</span><small>200 k = 3 checks</small></div>
+            <div><strong>0.73</strong><span>relation macro&#8209;F1 with the query</span><small>150 query-contrast groups; 0.54 without the query</small></div>
+            <div><strong>0.22</strong><span>CER with three candidates</span><small>200 cases; Prov-H 0.55; system ordering unchanged</small></div>
           </div>
         </div>
       </section>
 
       <section id="code" class="content-section section-shell section-tinted">
-        <div class="section-kicker">04 / Code</div>
+        <div class="section-kicker">Code</div>
         <div class="section-content code-grid">
           <div>
-            <h2>Code, prompts, and evaluation.</h2>
-            <p class="large-copy">The repository contains the implementation, prompts, ledger schemas, and evaluation scripts.</p>
-            <p>Code and evaluation materials are released together for reproduction.</p>
+            <h2>The a2r package</h2>
+            <p class="large-copy">The repository contains A2R-Decision as a Python package with a command-line runner for JSONL files.</p>
+            <p>The package holds the reading prompt, the validation of readings, the relation rules, the selection of the centrotype and the writer. It needs only the standard library of Python 3.9 or newer; an OpenAI-compatible client is optional. Benchmark scoring is not part of the package.</p>
+            <pre class="code-sample">python3 -m pip install -e ".[openai]"
+python3 -m a2r --input cases.jsonl --output results.jsonl --model MODEL_NAME</pre>
+            <p>Each input line holds a query and the candidates. The output keeps the input fields and adds an arbitration record with the answer, the selected reading and the reading for each order.</p>
           </div>
           <div class="release-card">
-            <span class="release-status">Project repository</span>
-            <h3>Code and evaluation scripts</h3>
-            <p>Implementation, prompts, ledger schemas, and evaluation scripts.</p>
-            <a class="button button-primary" href="https://github.com/NingK1ng/A2R" target="_blank" rel="noopener">Open code repository</a>
+            <span class="release-status">GitHub</span>
+            <h3>NingK1ng/A2R</h3>
+            <p>Code of the method and the source of this page.</p>
+            <a class="button button-primary" href="https://github.com/NingK1ng/A2R" target="_blank" rel="noopener">Open the repository</a>
           </div>
         </div>
       </section>
 
       <section id="dataset" class="content-section section-shell">
-        <div class="section-kicker">05 / Dataset</div>
+        <div class="section-kicker">Dataset</div>
         <div class="section-content">
           <div class="dataset-head">
             <div>
-              <h2>A benchmark for source-bounded arbitration.</h2>
-              <p class="large-copy">The benchmark fixes gold source structures before system execution. Evaluation records which relations arbitration preserves, erases, or maps incorrectly.</p>
+              <h2>A2R-Benchmark</h2>
+              <p class="large-copy">Each case has a gold source structure (units, query-conditioned relations, expected provenance, caveats and unsupported-claim traps) that was fixed before any system output was seen.</p>
             </div>
-            <a class="button button-primary" href="https://huggingface.co/datasets/Ning311/A2R-Benchmark" target="_blank" rel="noopener">Open dataset</a>
+            <a class="button button-primary" href="https://huggingface.co/datasets/Ning311/A2R-Benchmark" target="_blank" rel="noopener">Open on Hugging Face</a>
           </div>
           <div class="dataset-grid">
-            <article><strong>320</strong><span>controlled diagnostic cases</span></article>
+            <article><strong>320</strong><span>controlled pairwise cases</span></article>
             <article><strong>200</strong><span>natural pairwise cases</span></article>
             <article><strong>150</strong><span>query-contrast groups</span></article>
-            <article><strong>200</strong><span>three-candidate checks</span></article>
+            <article><strong>200</strong><span>three-candidate cases</span></article>
           </div>
-          <p class="dataset-note">The release contains no annotator identities, raw annotator logs, account metadata, or identifying free-text notes.</p>
+          <p class="dataset-note">The release contains no annotator identities, raw annotator logs, account metadata or identifying free-text notes.</p>
         </div>
       </section>
 
       <section id="paper" class="content-section section-shell section-paper">
-        <div class="section-kicker">06 / Paper</div>
+        <div class="section-kicker">Paper</div>
         <div class="section-content paper-grid">
           <div class="paper-preview">
-              <img src="assets/paper-first-page.png" alt="First page of the A2R paper" width="993" height="1405">
+            <img src="assets/paper-first-page.png" alt="First page of the A2R paper" width="993" height="1405">
           </div>
           <div class="paper-copy">
             <p class="paper-label">Measuring Source-Resolution Distortion in LLM Output Arbitration</p>
             <h2>A Source-Bounded Evaluation Framework</h2>
-            <p>Jinning Zhang, Yeqiang Wang, Yulong Zhang, and Xuanbo Su.</p>
+            <p>Jinning Zhang, Yeqiang Wang, Yulong Zhang and Xuanbo Su. EMNLP 2026.</p>
             <div class="paper-actions">
               <a class="button button-primary" href="assets/A2R-CR.pdf" target="_blank" rel="noopener">View PDF</a>
               <a class="button button-quiet" href="assets/A2R-CR.pdf" download="A2R-CR.pdf">Download PDF</a>
@@ -327,7 +326,7 @@ classification is determined.</pre>
     </main>
 
     <footer class="site-footer section-shell">
-      <div><span class="footer-mark">A<sup>2</sup>R</span><span>EMNLP project site · 2026</span></div>
+      <div><span class="footer-mark">A<sup>2</sup>R</span><span>EMNLP 2026</span></div>
       <div><a href="https://github.com/NingK1ng" target="_blank" rel="noopener">Jinning Zhang</a><span>·</span><a href="https://huggingface.co/datasets/Ning311/A2R-Benchmark" target="_blank" rel="noopener">Dataset</a></div>
     </footer>
     <script src="main.js" defer></script>
