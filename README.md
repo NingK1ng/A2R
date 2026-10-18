@@ -1,19 +1,7 @@
-# A2R-Decision
+# A²R
 
-Official implementation of the A2R-Decision method described in *Measuring Source-Resolution Distortion in LLM Output Arbitration: A Source-Bounded Evaluation Framework*.
+Code for *Measuring Source-Resolution Distortion in LLM Output Arbitration: A Source-Bounded Evaluation Framework* (EMNLP 2026).
 
-## Installation
+[Project page](https://ningk1ng.github.io/A2R/) · [Paper](dist/assets/A2R-CR.pdf) · [Dataset](https://huggingface.co/datasets/Ning311/A2R-Benchmark)
 
-```bash
-python3 -m pip install -e ".[openai]"
-```
-
-## Usage
-
-```bash
-python3 -m a2r --input cases.jsonl --output results.jsonl --model MODEL_NAME
-```
-
-Each JSONL input line contains `query` and `candidates` (`{"A": "...", "B": "..."}`). The output preserves the input fields and adds an `arbitration` object.
-
-The implementation is in [`a2r/`](a2r/).
+Implementation: [`a2r/`](a2r/).
