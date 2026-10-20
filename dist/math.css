@@ -1,0 +1,54 @@
+.katex {
+  font-size: 1.05em;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.method-definition {
+  container-type: inline-size;
+}
+
+.method-definition > * {
+  min-width: 0;
+}
+
+.math-display {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.equation-block.math-display {
+  display: block;
+  font-size: clamp(1rem, 1.4vw, 1.25rem);
+}
+
+.structure-equation.math-display {
+  font-size: clamp(.95rem, 1.25vw, 1.125rem);
+}
+
+.math-display .katex-display {
+  margin: .45em 0;
+}
+
+.math-display .katex-display > .katex {
+  text-align: left;
+}
+
+.method-code.math-display {
+  white-space: normal;
+}
+
+@container (max-width: 42rem) {
+  .method-definition-copy,
+  .structure-card {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .equation-block.math-display {
+    padding-inline: 0;
+  }
+}

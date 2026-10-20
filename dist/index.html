@@ -11,6 +11,8 @@
     <title>A2R: source-resolution distortion in LLM output arbitration</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23101114'/%3E%3Cpath d='M17 17h30v8H25v7h17v8H25v15h-8z' fill='%23f2a33b'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="assets/katex/katex.min.css">
+    <link rel="stylesheet" href="math.css">
   </head>
   <body>
     <header class="site-header">
@@ -142,18 +144,18 @@
             <div class="method-definition-copy">
               <div class="bridge-label">Objective</div>
               <h3>The answer should be read the way the candidates are read</h3>
-              <p>A reading <code>R</code> lists the claims the units make, each unit's stance on them (for or against, possibly under a condition) and the claims that are alternative answers. Two readings of a case are compared by <code>d</code>, the number of unit pairs they relate differently. A2R-Decision returns</p>
-              <div class="equation-block"><span>y* = argmin<sub>y</sub> Σ<sub>π</sub> d(R(y), R(πY))</span></div>
-              <p class="equation-caption">π ranges over the cyclic orders in which the candidates Y can be presented.</p>
+              <p>A reading \(R\) lists the claims the units make, each unit's stance on them (for or against, possibly under a condition) and the claims that are alternative answers. Two readings of a case are compared by \(d\), the number of unit pairs they relate differently. A2R-Decision returns</p>
+              <div class="equation-block math-display">\[y^{*} = \operatorname*{arg\,min}_{y} \sum_{\pi} d\bigl(R(y), R(\pi Y)\bigr)\]</div>
+              <p class="equation-caption">\(\pi\) ranges over the cyclic orders in which the candidates \(Y\) can be presented.</p>
             </div>
             <aside class="structure-card">
               <div class="bridge-label">The paper's reference structure</div>
-              <div class="structure-equation">S<sub>q</sub>(x) = (U<sub>A</sub>, U<sub>B</sub>, E<sub>q</sub>, P<sub>q</sub>, Q<sub>q</sub>)</div>
+              <div class="structure-equation math-display">\[S_q(x) = (U_A, U_B, E_q, P_q, Q_q)\]</div>
               <ul>
-                <li><strong>U<sub>A</sub>, U<sub>B</sub></strong> the numbered sentences of each candidate</li>
-                <li><strong>E<sub>q</sub></strong> relations computed from the stances</li>
-                <li><strong>P<sub>q</sub></strong> the units, and so the sources, behind each stance</li>
-                <li><strong>Q<sub>q</sub></strong> the conditions attached to stances</li>
+                <li><strong>\(U_A, U_B\)</strong> the numbered sentences of each candidate</li>
+                <li><strong>\(E_q\)</strong> relations computed from the stances</li>
+                <li><strong>\(P_q\)</strong> the units, and so the sources, behind each stance</li>
+                <li><strong>\(Q_q\)</strong> the conditions attached to stances</li>
               </ul>
             </aside>
           </div>
@@ -163,25 +165,25 @@
               <div class="stage-top"><span>1 Read</span><span>model call</span></div>
               <h3>Units and reading</h3>
               <p>The query and each candidate are split into numbered sentences (Q1, A1, B2, ...). One prompt asks for the claims, each unit's stances and the groups of alternative claims. A reading that fails validation is sent back once with the list of problems.</p>
-              <pre class="method-code">R = (claims, stances, alternatives)</pre>
+              <div class="method-code math-display">\[R = (\text{claims},\, \text{stances},\, \text{alternatives})\]</div>
             </article>
             <article class="stage-card stage-blue">
               <div class="stage-top"><span>2 Relate</span><span>computed</span></div>
               <h3>Relations from stances</h3>
               <p>The relation of every pair of units follows from their stances, in the paper's vocabulary. All relations come from one set of stances, so they cannot contradict each other.</p>
-              <pre class="method-code">rel(u, v) = f(stances(u), stances(v))</pre>
+              <div class="method-code math-display">\[\operatorname{rel}(u, v) = f\bigl(\text{stances}(u),\, \text{stances}(v)\bigr)\]</div>
             </article>
             <article class="stage-card stage-purple">
               <div class="stage-top"><span>3 Select</span><span>computed</span></div>
               <h3>Centrotype over orders</h3>
               <p>The candidates are read once in each cyclic order, and the reading with the smallest total distance to the others is kept. Ties go to alphabetical order, so the answer does not depend on how the candidates were supplied.</p>
-              <pre class="method-code">R̂ = argmin<sub>R</sub> Σ<sub>π</sub> d(R, R<sub>π</sub>)</pre>
+              <div class="method-code math-display">\[\hat{R} = \operatorname*{arg\,min}_{R} \sum_{\pi} d(R, R_{\pi})\]</div>
             </article>
             <article class="stage-card stage-orange">
               <div class="stage-top"><span>4 Write</span><span>computed</span></div>
               <h3>Answer with source indices</h3>
               <p>Each claim becomes one sentence that names the sources holding or denying it, with the condition of each stance. Alternative claims follow one another, introduced by "Alternatively". Readings that differ in which candidate holds or denies a claim, or under which condition, are never written alike.</p>
-              <pre class="method-code">y = W(R̂)</pre>
+              <div class="method-code math-display">\[y = W(\hat{R})\]</div>
             </article>
           </div>
 
@@ -218,27 +220,27 @@
           </div>
 
           <div class="measurement-grid">
-            <article><span class="measurement-index">D<sub>E</sub></span><h3>Extraction</h3><p>Whether the query-relevant units of the candidates are kept.</p></article>
-            <article><span class="measurement-index">D<sub>L</sub></span><h3>Trace</h3><p>Whether relations, provenance and caveat attachments in the trace match the reference.</p></article>
-            <article><span class="measurement-index">D<sub>R</sub></span><h3>Rendering</h3><p>Whether the final answer keeps the structure and source links of the trace.</p></article>
+            <article><span class="measurement-index">\(D_E\)</span><h3>Extraction</h3><p>Whether the query-relevant units of the candidates are kept.</p></article>
+            <article><span class="measurement-index">\(D_L\)</span><h3>Trace</h3><p>Whether relations, provenance and caveat attachments in the trace match the reference.</p></article>
+            <article><span class="measurement-index">\(D_R\)</span><h3>Rendering</h3><p>Whether the final answer keeps the structure and source links of the trace.</p></article>
           </div>
 
           <div class="evidence-grid evidence-detail">
             <div>
               <h3>Six metrics</h3>
-              <p>CER and Prov-H are the primary metrics. FCR, UAR and CPR serve as safety diagnostics. RF* is used only for mechanism analysis, because its relation labels have lower annotator agreement.</p>
+              <p>CER and Prov-H are the primary metrics. FCR, UAR and CPR serve as safety diagnostics. \(\mathrm{RF}^{*}\) is used only for mechanism analysis, because its relation labels have lower annotator agreement.</p>
               <div class="metric-list" aria-label="A2R metrics">
                 <div><span class="metric-code">CER</span><span>conflict erasure</span></div>
                 <div><span class="metric-code">FCR</span><span>false conflict</span></div>
                 <div><span class="metric-code">UAR</span><span>unsupported addition</span></div>
                 <div><span class="metric-code">Prov-H</span><span>provenance exposure and accuracy</span></div>
                 <div><span class="metric-code">CPR</span><span>caveat preservation</span></div>
-                <div><span class="metric-code">RF*</span><span>query-conditioned relation fidelity</span></div>
+                <div><span class="metric-code">\(\mathrm{RF}^{*}\)</span><span>query-conditioned relation fidelity</span></div>
               </div>
             </div>
             <div class="results-panel">
               <div class="results-heading"><span>Final-only fidelity (Table 3)</span><span>520 pairwise cases</span></div>
-              <div class="result-row result-header"><span>System</span><span>CER ↓</span><span>Prov-H ↑</span></div>
+              <div class="result-row result-header"><span>System</span><span>\(\mathrm{CER}\downarrow\)</span><span>\(\mathrm{Prov\text{-}H}\uparrow\)</span></div>
               <div class="result-row"><span>Checklist Prompt</span><strong>0.23</strong><strong>0.45</strong></div>
               <div class="result-row"><span>Post-hoc Attribution</span><strong>0.24</strong><strong>0.55</strong></div>
               <div class="result-row"><span>A2R-Heuristic</span><strong>0.19</strong><strong>0.60</strong></div>
@@ -329,6 +331,9 @@ python3 -m a2r --input cases.jsonl --output results.jsonl --model MODEL_NAME</pr
       <div><span class="footer-mark">A<sup>2</sup>R</span><span>EMNLP 2026</span></div>
       <div><a href="https://github.com/NingK1ng" target="_blank" rel="noopener">Jinning Zhang</a><span>·</span><a href="https://huggingface.co/datasets/Ning311/A2R-Benchmark" target="_blank" rel="noopener">Dataset</a></div>
     </footer>
+    <script src="assets/katex/katex.min.js" defer></script>
+    <script src="assets/katex/auto-render.min.js" defer></script>
+    <script src="math.js" defer></script>
     <script src="main.js" defer></script>
   </body>
 </html>
