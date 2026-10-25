@@ -1,11 +1,11 @@
 """OpenAI-compatible model adapter."""
 from __future__ import annotations
 
-from .arbiter import LLM
+from .coding import LLM
 
 
 def openai_chat(model: str, base_url: str | None = None, api_key: str | None = None, temperature: float | None = 0.0) -> LLM:
-    """Return a reader with cumulative token usage."""
+    """Return a semantic judgment callable with cumulative token usage."""
     from openai import OpenAI
 
     client = OpenAI(base_url=base_url, api_key=api_key)

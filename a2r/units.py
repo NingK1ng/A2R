@@ -6,7 +6,6 @@ from dataclasses import dataclass
 
 QUERY = "query"  # Query units: Q1, Q2, ...
 
-_MARKER = re.compile(r"^\s*(?:[-*•]+|#+|\d+[.)])\s+")  # list bullets, headings, enumerations
 _END = re.compile(r"[.!?]+[\"')\]]*(?=\s+[\"'(\[]?[A-Z0-9])|[。！？]+")  # . ! ? before a capital; CJK stops
 _ABBREVIATION = re.compile(r"(?:\b(?:[A-Za-z]\.){2,}|\b(?:Mr|Mrs|Ms|Dr|Prof|St|vs|cf|approx|Fig|No|Inc|Ltd|Jr|Sr|al)\.)$")
 
@@ -21,7 +20,7 @@ class Unit:
 def segment(text: str) -> list[str]:
     sentences = []
     for line in text.splitlines():
-        line = _MARKER.sub("", line).strip()
+        line = line.strip()
         start = 0
         for end in _END.finditer(line):
             piece = line[start : end.end()].strip()
@@ -35,6 +34,12 @@ def segment(text: str) -> list[str]:
 
 def number(query: str, candidates: dict[str, str]) -> dict[str, Unit]:
     """Assign query and source sentence IDs."""
+    if not isinstance(query, str) or not isinstance(candidates, dict) or not candidates:
+        raise ValueError("query must be text and candidates must be a nonempty source mapping")
+    if any(not isinstance(label, str) or not label.strip() for label in candidates):
+        raise ValueError("source labels must be nonempty strings")
+    if any(not isinstance(text, str) for text in candidates.values()):
+        raise ValueError("every candidate must contain text")
     if QUERY in candidates or "Q" in candidates:
         raise ValueError(f"the candidate labels {QUERY!r} and 'Q' are reserved for the query")
     units = {}

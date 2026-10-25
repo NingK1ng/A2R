@@ -1,101 +1,125 @@
-"""Prompts for reading structural residuals."""
+"""Read semantic correspondences inside exact text-replacement blocks."""
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+import re
+from collections.abc import Callable
 
-from .units import Unit
-
-if TYPE_CHECKING:
-    from .reading import Claim
+from .records import Alignment, Error
 
 
-INNOVATION = """Read only the current source as evidence for what that source says about the query.
-The prediction is a structural hypothesis, not evidence or a preferred answer.
-Identify its innovations directly from the current original text. Return edit operations,
-not a complete current-source graph followed by a computed difference. Do not choose a winner.
+QUANTIZATION = """Find candidate semantic correspondences inside the eligible
+replacement blocks below. The encoder may reuse an old span only when BOTH entailment
+directions are true. It will transmit all uncovered current text exactly. Return
+coordinates and boolean judgments only; do not generate replacement text.
 
-Query context (not source evidence):
+Query context:
 {query}
 
-Current source {source}, numbered original units:
-{units}
-
-Predicted structure (all entries await confirmation from the current source):
+Full prediction, with zero-based unit indices:
 {prediction}
 
-Return only a JSON object with four fields:
-  "keep": {{"predicted_id": ["current_unit_id", "another_current_unit_id"]}},
-  "drop": ["predicted_id"],
-  "replace": {{"predicted_id": complete_claim}},
-  "add": [complete_claim]
+Full current source, with zero-based indices and original evidence IDs:
+{current}
 
-Every predicted identifier must occur exactly once across keep, drop, and replace.
-For an empty prediction, keep and replace are empty objects, drop is empty, and all
-relevant assertions go in add. Use no identifiers outside the prediction as edit keys.
+Eligible replacement blocks:
+{blocks}
 
-Operations:
-- KEEP only when the current source supports the entire predicted meaning, including
-  target, polarity, scope, condition, and the full meaning of text. Equivalent wording
-  is allowed. Supply fresh
-  current-source anchors; never retain a claim merely because the prediction contains it.
-- DROP when that predicted assertion is not stated by the current source. Silence is
-  not denial. A dropped assertion adds no negative stance to the current source.
-- REPLACE when a corresponding assertion changes its target, polarity, scope, condition,
-  or condition attachment. Supply the complete current claim and its current anchors.
-  Do not return a fragment such as "different condition" or silently inherit old fields.
-- ADD assertions absent from the prediction, including extra positions on an existing
-  target. A source may make conflicting assertions: preserve both instead of reconciling
-  them. Do not force genuinely new content into an existing predicted claim.
+Return only JSON:
+{{"alignments": [{{"block": 0, "old": [0, 1], "new": [0, 2],
+                  "old_to_new": true, "new_to_old": true}}]}}
 
-A complete claim has exactly these fields:
-{{"target": "the proposition", "polarity": "+", "scope": "",
- "condition": null, "text": "the full assertion", "units": ["current_unit_id"]}}
+"block" is an original replacement opcode ID from the eligible list.
+"old" and "new" are GLOBAL half-open index ranges [start, stop), not offsets inside
+the block. Each range must be nonempty, continuous, and wholly inside its listed
+replacement block. Use the supplied whole-unit boundaries; never select word fragments.
+One old unit may correspond to several new units, and several old units to one new unit.
 
-Preserve the original language and these distinctions:
-- target retains the subject, modality, quantities, and quantifier scope. Reuse a
-  predicted target only when its meaning is equivalent; sharing a topic is insufficient.
-  It must contain all assertion logic not represented by scope or condition, including
-  causal links and linked choices; those meanings cannot appear only in text.
-  When that meaning is unchanged, copy the predicted target string exactly, even if
-  the current source paraphrases it or changes its attached condition or scope.
-  polarity is "+" for asserting that target and "-" for explicitly denying it.
-  Keep inner negation in the target when moving it would change modal or quantifier
-  scope: "must not launch" is not simply the denial of "must launch".
-- scope records stated time, population, and other applicability limits; use "" when
-  none is stated. Keep each limit attached to the assertion it actually qualifies.
-- condition is null when no condition is stated, not a claim of universal applicability.
-  Otherwise use {{"kind": "if|only_if|iff|unless|when|complex", "text": "original qualifier wording"}}.
-  Choose one kind. "if C, P" makes C sufficient for the signed proposition P;
-  "P only if C" makes C necessary for that signed proposition, including when polarity
-  is "-". Preserve necessity versus sufficiency and negation within the condition.
-  Conditions describe contingencies, not facts that have already happened.
-- Preserve compound conditions, causal links, and either/or statements with their
-  original wording and attachment. Use complex for conditions whose logic would be
-  distorted by a simpler kind; do not invent separate facts or select one alternative.
-- text gives a complete, faithful statement, including qualifiers and linked clauses;
-  it need not be a verbatim quotation. Original wording remains available through units.
-  Do not put additional independent assertions in text without representing them in
-  the structural fields or as separate claims.
-  units must be a nonempty list of current-source unit identifiers supporting that
-  whole assertion. Several assertions may share a unit; one assertion may span units.
-  The query and the prediction cannot supply an anchor or establish a source assertion.
+A replacement block may mix paraphrases with changed assertions. Look for smaller
+complete correspondences inside such blocks rather than judging only the entire block.
+Propose useful alternatives even when their ranges overlap; the encoder will choose
+an ordered, nonoverlapping subset. Do not repeat the same block/old/new correspondence.
+You need not cover every unit or block. An empty alignments list means no candidates;
+uncovered current text is retained, never discarded.
 
-Read all current-source units once more for relevant content the prediction does not
-contain. Capture that content through add or a complete replacement. Leave out only
-material unrelated to the query. Return no explanations or final answer."""
+old_to_new asks whether the COMPLETE old span entails the COMPLETE new span.
+new_to_old asks whether the COMPLETE new span entails the COMPLETE old span.
+Report each direction separately; a one-way correspondence may be included but will
+not be reused. Use false for an uncertain direction. True/true requires interchangeable
+complete meanings in their full contexts, not shared topics, similar words, partial
+overlap, or an inference based on outside facts.
+
+Preserve negation and its scope, modality, quantities, quantifiers, attribution, time,
+population, necessary versus sufficient conditions, causal links, and linked choices.
+Do not detach a condition, exception, or referent from the assertion it qualifies.
+"Release only if checks pass" is not interchangeable with "release" or "if checks pass,
+release". Do not ignore a meaning difference because it seems unimportant to the query.
+The prediction is not evidence or a preferred answer. Preserve contradictory assertions.
+
+Check context jointly: for ANY subset of proposed true/true correspondences that can
+be selected together without overlapping or crossing in either sequence, substituting
+those old spans must preserve the complete current-source meaning. This includes
+cross-span conditions and pronoun references. If equivalence depends on also replacing
+another span, expand to a complete span that contains the dependency, or do not mark
+both directions true. Never assume that the encoder will select another candidate.
+Insertions, deletions, and equal blocks are ineligible.
+Return no explanations, confidence scores, generated text, or additional fields."""
 
 
-def innovation_prompt(
-    query: str, source: str, units: dict[str, Unit], prediction: dict[str, Claim]
-) -> str:
-    """Format current source units and the prediction."""
-    predicted = {claim_id: claim.to_dict() for claim_id, claim in prediction.items()}
-    for claim in predicted.values():
-        claim.pop("units", None)
-    return INNOVATION.format(
+def semantic_alignments(llm: Callable[[str], str], query: str,
+                        error: Error) -> tuple[Alignment, ...]:
+    blocks = {
+        index: (a, b, c, d)
+        for index, (tag, a, b, c, d) in enumerate(error.spans)
+        if tag == "replace" and a < b and c < d
+    }
+    if not blocks:
+        return ()
+    prompt = QUANTIZATION.format(
         query=query,
-        source=json.dumps(source, ensure_ascii=False),
-        units="\n".join(f"[{u.id}] {u.text}" for u in units.values() if u.source == source),
-        prediction=json.dumps(predicted, ensure_ascii=False, indent=2),
+        prediction=json.dumps([{"index": i, "text": text}
+                               for i, text in enumerate(error.prediction)], ensure_ascii=False),
+        current=json.dumps([{"index": i, "id": unit.id, "text": unit.text}
+                            for i, unit in enumerate(error.current)], ensure_ascii=False),
+        blocks=json.dumps([{"block": index, "old": [a, b], "new": [c, d]}
+                           for index, (a, b, c, d) in blocks.items()], ensure_ascii=False),
     )
+    reply = re.sub(r"<think>.*?(</think>|$)", "", llm(prompt), flags=re.S).strip()
+    fence = "```"
+    reply = re.sub(rf"^{fence}(?:json)?\s*|\s*{fence}$", "", reply, flags=re.I).strip()
+
+    def unique_object(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError(f"duplicate JSON field: {key}")
+            value[key] = item
+        return value
+
+    raw = json.loads(reply, object_pairs_hook=unique_object)
+    if not isinstance(raw, dict) or set(raw) != {"alignments"} or not isinstance(raw["alignments"], list):
+        raise ValueError("semantic reader must return exactly an alignments list")
+    alignments, seen = [], set()
+    fields = {"block", "old", "new", "old_to_new", "new_to_old"}
+    for item in raw["alignments"]:
+        if not isinstance(item, dict) or set(item) != fields:
+            raise ValueError("each alignment needs exactly block, old, new, old_to_new, new_to_old")
+        block = item["block"]
+        if type(block) is not int or block not in blocks:
+            raise ValueError("alignment block must be an eligible replacement opcode")
+        old, new = item["old"], item["new"]
+        if any(not isinstance(span, list) or len(span) != 2
+               or any(type(index) is not int for index in span) for span in (old, new)):
+            raise ValueError("alignment ranges must be pairs of integer unit coordinates")
+        a, b, c, d = blocks[block]
+        if not (a <= old[0] < old[1] <= b and c <= new[0] < new[1] <= d):
+            raise ValueError("alignment ranges must be nonempty and inside their replacement block")
+        if type(item["old_to_new"]) is not bool or type(item["new_to_old"]) is not bool:
+            raise ValueError("entailment judgments must be booleans")
+        key = (block, *old, *new)
+        if key in seen:
+            raise ValueError("alignment correspondences must be unique")
+        seen.add(key)
+        alignments.append(Alignment(block, old[0], old[1], new[0], new[1],
+                                    item["old_to_new"], item["new_to_old"]))
+    return tuple(alignments)

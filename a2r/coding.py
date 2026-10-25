@@ -1,83 +1,65 @@
-"""Predictive reading of source claims."""
+"""Closed-loop prediction, exact residuals, semantic quantization, and reconstruction."""
 from __future__ import annotations
 
-import json
-import re
 from collections.abc import Callable
-from dataclasses import replace
-from itertools import combinations
+from difflib import SequenceMatcher
 
-from .prompts import innovation_prompt
-from .reading import Claim, Frame, Reading, Residual
+from .alignment import encode_gap, select_alignment
+from .prompts import semantic_alignments
+from .records import Error, Frame, Packet
 from .units import Unit
 
 LLM = Callable[[str], str]
 
 
-def predict(reference: Frame | None) -> dict[str, Claim]:
-    """Copy the reference and clear its source anchors."""
-    return {} if reference is None else {
-        key: replace(claim, units=()) for key, claim in reference.claims.items()
-    }
+def predict(previous: Frame | None) -> tuple[str, ...]:
+    """Both encoder and decoder predict from the same reconstructed history."""
+    return () if previous is None else previous.texts
 
 
-def innovation(llm: LLM, query: str, source: str, units: dict[str, Unit],
-               prediction: dict[str, Claim]) -> Residual:
-    """Read current-source edits against the prediction."""
-    reply = llm(innovation_prompt(query, source, units, prediction))
-    reply = re.sub(r"<think>.*?(</think>|$)", "", reply, flags=re.S)
-    raw = json.loads(reply[reply.find("{"):reply.rfind("}") + 1])
-    return Residual.parse(raw, prediction, units, source)
+def difference(prediction: tuple[str, ...], current: tuple[Unit, ...]) -> Error:
+    """Keep the exact unit edits before making any semantic judgment."""
+    target = tuple(unit.text for unit in current)
+    spans = SequenceMatcher(None, prediction, target, autojunk=False).get_opcodes()
+    return Error(prediction, current, tuple(spans))
 
 
-def reconstruct(prediction: dict[str, Claim], residual: Residual) -> Frame:
-    """Apply edits and bind claims to current-source anchors."""
-    claims = {
-        key: replace(prediction[key], units=residual.keep[key])
-        if key in residual.keep else residual.replace[key]
-        for key in prediction if key not in residual.drop
-    }
-    claims.update({f"{residual.source}:{n}": claim
-                   for n, claim in enumerate(residual.add, 1)})
-    return Frame(residual.source, claims)
+def quantize(llm: LLM, query: str, source: str, error: Error) -> Packet:
+    """Reuse equivalent subranges; transmit every remaining difference literally."""
+    candidates = semantic_alignments(llm, query, error)
+    patches, evidence = [], []
+
+    def emit_gap(old_start: int, old_stop: int, new_start: int, new_stop: int) -> None:
+        patch, refs = encode_gap(error, old_start, old_stop, new_start, new_stop)
+        if patch is not None:
+            patches.append(patch)
+        evidence.extend(refs)
+
+    for block, (kind, old_start, old_stop, new_start, new_stop) in enumerate(error.spans):
+        if kind == "equal":
+            evidence.extend((unit.id,) for unit in error.current[new_start:new_stop])
+            continue
+
+        matches = select_alignment(error, block, candidates) if kind == "replace" else ()
+        old_cursor, new_cursor = old_start, new_start
+        for match in matches:
+            emit_gap(old_cursor, match.old_start, new_cursor, match.new_start)
+            refs = tuple(unit.id for unit in error.current[match.new_start:match.new_stop])
+            evidence.extend([refs] * (match.old_stop - match.old_start))
+            old_cursor, new_cursor = match.old_stop, match.new_stop
+        emit_gap(old_cursor, old_stop, new_cursor, new_stop)
+
+    return Packet(source, tuple(patches), tuple(evidence))
 
 
-def reconcile(reading: Reading) -> tuple[str, list[dict]]:
-    """Compare reconstructed claims and preserve their attribution."""
-    targets: dict[str, list[tuple[str, str, Claim]]] = {}
-    for source, frame in reading.frames.items():
-        for key, claim in frame.claims.items():
-            targets.setdefault(claim.target, []).append((source, key, claim))
-
-    paragraphs, relations = [], []
-    fields = ("polarity", "scope", "condition")
-    for target, entries in targets.items():
-        variants: dict[tuple, list[tuple[str, str, Claim]]] = {}
-        for source, key, claim in entries:
-            signature = (*[getattr(claim, f) for f in fields], claim.text)
-            variants.setdefault(signature, []).append((source, key, claim))
-        lines = [f"Regarding {json.dumps(target, ensure_ascii=False)}:"]
-        for group in variants.values():
-            sources = list(dict.fromkeys(source for source, _, _ in group))
-            refs = list(dict.fromkeys(u for _, _, claim in group for u in claim.units))
-            names = ", ".join(json.dumps(s, ensure_ascii=False) for s in sources)
-            label = "Candidate" if len(sources) == 1 else "Candidates"
-            lines.append(f"{label} {names}: {group[0][2].text} [{', '.join(refs)}]")
-        paragraphs.append("\n".join(lines))
-
-        for (s, a, x), (t, b, y) in combinations(entries, 2):
-            if s == t:
-                continue
-            changes = [f for f in fields if getattr(x, f) != getattr(y, f)]
-            relation = "equivalent" if not changes else (
-                "conflict" if changes == ["polarity"] and x.condition is None
-                else "qualified_difference"
-            )
-            relations.append({"sources": [s, t], "claims": [a, b],
-                              "units": [list(x.units), list(y.units)],
-                              "relation": relation, "changes": changes})
-
-    for source, frame in reading.frames.items():
-        if not frame.claims:
-            paragraphs.append(f"Candidate {json.dumps(source, ensure_ascii=False)}: no relevant statements recorded.")
-    return "\n\n".join(paragraphs), relations
+def reconstruct(prediction: tuple[str, ...], packet: Packet) -> Frame:
+    """Apply ordered patches in original prediction coordinates, without a model."""
+    texts, cursor = [], 0
+    for patch in packet.patches:
+        if not cursor <= patch.start <= patch.stop <= len(prediction):
+            raise ValueError("patches must be ordered, nonoverlapping prediction intervals")
+        texts.extend(prediction[cursor:patch.start])
+        texts.extend(patch.text)
+        cursor = patch.stop
+    texts.extend(prediction[cursor:])
+    return Frame(packet.source, tuple(texts), packet.evidence)

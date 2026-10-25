@@ -6,7 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .arbiter import Arbiter
+from .codec import DPCM
 from .llm import openai_chat
 
 
@@ -21,16 +21,16 @@ def main() -> None:
     if Path(args.input).resolve() == Path(args.output).resolve():
         parser.error("input and output must be different files")
 
-    arbiter = Arbiter(openai_chat(args.model, args.base_url, temperature=args.temperature))
+    codec = DPCM(openai_chat(args.model, args.base_url, temperature=args.temperature))
     with open(args.input, encoding="utf-8") as fin, open(args.output, "w", encoding="utf-8") as fout:
         for line in fin:
             if not line.strip():
                 continue
             case = json.loads(line)
             try:
-                case["arbitration"] = arbiter(case["query"], case["candidates"]).to_dict()
+                case["dpcm"] = codec(case["query"], case["candidates"]).to_dict()
             except Exception as error:  # record a failed case and continue the batch
-                case["arbitration"] = {"error": repr(error)}
+                case["dpcm"] = {"error": repr(error)}
             fout.write(json.dumps(case, ensure_ascii=False) + "\n")
             fout.flush()
 
