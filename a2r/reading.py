@@ -1,188 +1,133 @@
-"""A reading of the candidates: the claims their units put forward on the query, which unit counts
-for or against which claim and under what condition, and which claims are alternatives.
-
-Relations between units are computed from the reading rather than read separately, so the relations
-of a reading are always jointly consistent, and two readings of one case can be compared unit pair by
-unit pair however their claims are worded.
-"""
+"""Source claims, conditions, and residual validation."""
 from __future__ import annotations
 
-import re
-from collections.abc import Collection
 from dataclasses import dataclass
-from itertools import combinations
 
 from .units import QUERY, Unit
 
-_CONDITIONAL = re.compile(r"^(?:only if|if|when|whenever|unless|provided)\b", re.I)
 
-
-def _plain(text: str) -> str:
-    """Normalised wording, to recognise a condition restated as a claim."""
-    text = re.sub(r"\s+", " ", text.strip().rstrip(".!?;:").lower())
-    return re.sub(r"^(?:only if|if|when|whenever|provided(?: that)?) ", "", text)
+def _anchors(raw: object, units: dict[str, Unit], source: str) -> tuple[str, ...]:
+    if source == QUERY or not isinstance(raw, list) or not raw:
+        raise ValueError("anchors must be a nonempty list from the current candidate")
+    if any(not isinstance(u, str) or u not in units or units[u].source != source for u in raw):
+        raise ValueError(f"anchors must refer only to units of source {source!r}")
+    if len(set(raw)) != len(raw):
+        raise ValueError("duplicate unit anchors")
+    return tuple(raw)
 
 
 @dataclass(frozen=True)
-class Stance:
-    unit: str
-    claim: str
-    polarity: str  # "+": the unit counts for the claim, "-": against it
-    condition: str | None  # the stance holds only under this circumstance
+class Condition:
+    kind: str
+    text: str
+
+
+@dataclass(frozen=True)
+class Claim:
+    target: str  # Includes modality and quantifiers.
+    polarity: str
+    scope: str
+    condition: Condition | None  # Applies to the signed target.
+    text: str
+    units: tuple[str, ...]
+
+    @classmethod
+    def parse(cls, raw: dict, units: dict[str, Unit], source: str) -> Claim:
+        fields = {"target", "polarity", "scope", "condition", "text", "units"}
+        if not isinstance(raw, dict) or set(raw) != fields:
+            raise ValueError("claim must contain exactly target, polarity, scope, condition, text, units")
+        for field in ("target", "text"):
+            if not isinstance(raw[field], str) or not raw[field].strip():
+                raise ValueError(f"claim {field} must be a nonempty string")
+        if raw["polarity"] not in ("+", "-"):
+            raise ValueError("claim polarity must be '+' or '-'")
+        if not isinstance(raw["scope"], str):
+            raise ValueError("claim scope must be a string; use an empty string when unstated")
+        condition = raw["condition"]
+        if condition is not None:
+            if not isinstance(condition, dict) or set(condition) != {"kind", "text"}:
+                raise ValueError("condition must be null or an object containing exactly kind and text")
+            if condition["kind"] not in ("if", "only_if", "iff", "unless", "when", "complex"):
+                raise ValueError("invalid condition kind")
+            if not isinstance(condition["text"], str) or not condition["text"].strip():
+                raise ValueError("condition text must be a nonempty string")
+            condition = Condition(condition["kind"], condition["text"].strip())
+        return cls(
+            raw["target"].strip(), raw["polarity"], raw["scope"].strip(),
+            condition, raw["text"].strip(), _anchors(raw["units"], units, source),
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "target": self.target,
+            "polarity": self.polarity,
+            "scope": self.scope,
+            "condition": None if self.condition is None else {
+                "kind": self.condition.kind, "text": self.condition.text,
+            },
+            "text": self.text,
+            "units": list(self.units),
+        }
+
+
+@dataclass
+class Frame:
+    source: str
+    claims: dict[str, Claim]
+
+    def to_dict(self) -> dict:
+        return {"source": self.source, "claims": {key: claim.to_dict() for key, claim in self.claims.items()}}
+
+
+@dataclass
+class Residual:
+    source: str
+    keep: dict[str, tuple[str, ...]]
+    drop: tuple[str, ...]
+    replace: dict[str, Claim]
+    add: tuple[Claim, ...]
+
+    @classmethod
+    def parse(cls, raw: dict, prediction: dict[str, Claim], units: dict[str, Unit], source: str) -> Residual:
+        """Validate edit coverage and current-source anchors."""
+        if not isinstance(raw, dict) or set(raw) != {"keep", "drop", "replace", "add"}:
+            raise ValueError("residual must contain exactly keep, drop, replace, add")
+        if not isinstance(raw["keep"], dict) or not isinstance(raw["replace"], dict):
+            raise ValueError("keep and replace must be objects keyed by prediction IDs")
+        if not isinstance(raw["drop"], list) or not isinstance(raw["add"], list):
+            raise ValueError("drop and add must be lists")
+        ids = [*raw["keep"], *raw["drop"], *raw["replace"]]
+        if any(not isinstance(key, str) for key in ids):
+            raise ValueError("prediction IDs must be strings")
+        if len(set(ids)) != len(ids):
+            raise ValueError("keep, drop and replace must not repeat or overlap prediction IDs")
+        if set(ids) != set(prediction):
+            missing, unknown = set(prediction) - set(ids), set(ids) - set(prediction)
+            raise ValueError(f"residual coverage mismatch: missing={sorted(missing)}, unknown={sorted(unknown)}")
+        return cls(
+            source,
+            {key: _anchors(refs, units, source) for key, refs in raw["keep"].items()},
+            tuple(raw["drop"]),
+            {key: Claim.parse(claim, units, source) for key, claim in raw["replace"].items()},
+            tuple(Claim.parse(claim, units, source) for claim in raw["add"]),
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "keep": {key: list(refs) for key, refs in self.keep.items()},
+            "drop": list(self.drop),
+            "replace": {key: claim.to_dict() for key, claim in self.replace.items()},
+            "add": [claim.to_dict() for claim in self.add],
+        }
 
 
 @dataclass
 class Reading:
     units: dict[str, Unit]
-    claims: dict[str, str]  # id -> source-neutral clause, in the order an answer presents them
-    stances: list[Stance]
-    issues: list[tuple[str, ...]]  # claims grouped into mutually exclusive alternatives; singletons included
-
-    @classmethod
-    def parse(cls, raw: dict, units: dict[str, Unit]) -> Reading:
-        """Validate a reading proposed by a model. Claims worded alike are taken as one claim; every
-        other problem is reported in one ValueError, so that a single repair can address all of them."""
-        problems: list[str] = []
-        claims: dict[str, str] = {}
-        same: dict[str, str] = {}  # a claim id whose text repeats an earlier claim -> the earlier id
-        for c in raw.get("claims") or []:
-            text = (c.get("text") or "").strip()
-            if c["id"] in claims or c["id"] in same:
-                problems.append(f"duplicate claim id {c['id']!r}")
-            elif not text:
-                problems.append(f"claim {c['id']!r} has no text")
-            elif any(_plain(text) == _plain(t) for t in claims.values()):
-                same[c["id"]] = next(k for k, t in claims.items() if _plain(text) == _plain(t))
-            else:
-                claims[c["id"]] = text
-                if _CONDITIONAL.match(text):
-                    problems.append(
-                        f"claim {c['id']!r} ({text!r}) contains a condition: keep as the claim only what holds under "
-                        f"the condition, and give the condition as the if of the stances that take it"
-                    )
-        if not claims:
-            raise ValueError("no claims")
-
-        stances: list[Stance] = []
-        for s in raw.get("stances") or []:
-            condition = (s.get("if") or "").strip()
-            claim = same.get(s["claim"], s["claim"])
-            stance = Stance(s["unit"], claim, s["polarity"], None if condition.lower() in ("", "none", "null") else condition)
-            if stance.unit not in units:
-                problems.append(f"stance of unknown unit {stance.unit!r}")
-            elif stance.claim not in claims:
-                problems.append(f"stance on unknown claim {stance.claim!r}")
-            elif stance.polarity not in ("+", "-"):
-                problems.append(f"polarity must be '+' or '-', got {stance.polarity!r}")
-            elif stance not in stances:
-                stances.append(stance)
-        for a, b in combinations(stances, 2):
-            if (a.unit, a.claim, a.condition) == (b.unit, b.claim, b.condition):
-                problems.append(f"{a.unit} counts both for and against {a.claim} under the same condition")
-        own = {(s.unit, _plain(s.condition)) for s in stances if s.condition}
-        for s in stances:
-            if s.condition is None and (s.unit, _plain(claims[s.claim])) in own:
-                problems.append(
-                    f"{s.unit} takes a stance on {s.claim} ({claims[s.claim]!r}) and makes another of its stances hold "
-                    f"only under it. If {s.unit} merely names it as a condition, drop the stance of {s.unit} on {s.claim} "
-                    f"(and {s.claim} itself if no other stance is left on it). If {s.unit} states it, its other stance does "
-                    f"not depend on it: make that stance unconditional, or drop it. Leave all other stances as they are"
-                )
-        for c in claims:
-            if not any(s.claim == c for s in stances):
-                problems.append(f"claim {c!r} has no stance: drop it, or attach the units that make it")
-
-        root = {c: c for c in claims}
-
-        def find(c: str) -> str:
-            while root[c] != c:
-                c = root[c]
-            return c
-
-        for group in raw.get("alternatives") or []:
-            group = [same.get(c, c) for c in group]
-            problems += [f"unknown claim {c!r} among alternatives" for c in group if c not in claims]
-            known = [c for c in group if c in claims]
-            for c in known[1:]:
-                root[find(c)] = find(known[0])
-        if problems:
-            raise ValueError("; ".join(problems))
-        issues: dict[str, list[str]] = {}
-        for c in claims:
-            issues.setdefault(find(c), []).append(c)
-        return cls(units, claims, stances, [tuple(issue) for issue in issues.values()])
-
-    def issue_of(self, claim: str) -> tuple[str, ...]:
-        return next(issue for issue in self.issues if claim in issue)
-
-    def stances_of(self, units: Collection[str]) -> frozenset[tuple[str, str, str | None]]:
-        return frozenset((s.claim, s.polarity, s.condition) for s in self.stances if s.unit in units)
-
-    def sources(self, units: Collection[str]) -> list[str]:
-        """Sources of the units: candidates in order, the query last."""
-        found = {self.units[u].source for u in units}
-        candidates = [s for s in dict.fromkeys(u.source for u in self.units.values()) if s != QUERY]
-        return [s for s in candidates if s in found] + ([QUERY] if QUERY in found else [])
-
-    def relate(self, xs: Collection[str], ys: Collection[str]) -> tuple[str, str]:
-        """(relation, operation) of two groups of units.
-
-        Units without stances bear on nothing under the query. Units conflict if one counts against
-        a claim the other counts for, or both support different alternatives; the conflict is
-        conditional if every such clash involves a stance taken only under a condition. Otherwise
-        units with the same stances are equivalent, units whose stances include the other's subsume
-        them, and the rest add to each other, conditionally if a claim they share carries a condition.
-        """
-        a, b = self.stances_of(xs), self.stances_of(ys)
-        if not a or not b:
-            return "query_invalid", "drop"
-        clashes = [(s, t) for s in a for t in b if self._clash(s, t)]
-        if clashes:
-            return "conflict", "condition" if all(s[2] or t[2] for s, t in clashes) else "report_unresolved"
-        if a == b:
-            return "equivalent", "merge"
-        shared = {c for c, _, _ in a} & {c for c, _, _ in b}
-        operation = "condition" if any(g for c, _, g in a | b if c in shared) else "merge"
-        return ("subsumes" if a < b or b < a else "additive"), operation
-
-    def _clash(self, s: tuple, t: tuple) -> bool:
-        if s[0] == t[0]:
-            return s[1] != t[1]
-        return s[1] == t[1] == "+" and t[0] in self.issue_of(s[0])
-
-    def relation(self, x: str, y: str) -> tuple[str, str]:
-        return self.relate([x], [y])
-
-    def relations(self) -> list[dict]:
-        """Pairs of units from different sources whose relation is not additive/merge, the subsuming
-        unit first. Unlisted pairs are additive/merge, or query_invalid/drop if a unit has no stance."""
-        found = []
-        for x, y in combinations(self.units, 2):
-            if self.units[x].source == self.units[y].source or not self.stances_of([x]) or not self.stances_of([y]):
-                continue
-            relation, operation = self.relation(x, y)
-            if relation == "subsumes" and self.stances_of([x]) < self.stances_of([y]):
-                x, y = y, x
-            if (relation, operation) != ("additive", "merge"):
-                found.append({"units": [x, y], "relation": relation, "operation": operation})
-        return found
-
-    def signature(self) -> dict[tuple[str, str], tuple[str, str]]:
-        """The relation of every pair of units."""
-        return {(x, y): self.relation(x, y) for x, y in combinations(self.units, 2)}
+    frames: dict[str, Frame]
 
     def to_dict(self) -> dict:
         return {
-            "units": [{"id": u.id, "source": u.source, "text": u.text} for u in self.units.values()],
-            "claims": [
-                {
-                    "id": c,
-                    "text": text,
-                    "stances": [{"unit": s.unit, "polarity": s.polarity, "if": s.condition} for s in self.stances if s.claim == c],
-                }
-                for c, text in self.claims.items()
-            ],
-            "alternatives": [list(issue) for issue in self.issues if len(issue) > 1],
-            "irrelevant": [u for u, unit in self.units.items() if unit.source != QUERY and not self.stances_of([u])],
-            "relations": self.relations(),
+            "units": [{"id": unit.id, "source": unit.source, "text": unit.text} for unit in self.units.values()],
+            "frames": {source: frame.to_dict() for source, frame in self.frames.items()},
         }

@@ -1,9 +1,10 @@
-"""python -m a2r --input cases.jsonl --output out.jsonl --model MODEL [--base-url URL] [--rounds N] [--temperature T]
+"""python -m a2r --input cases.jsonl --output out.jsonl --model MODEL [--base-url URL]
 
 Each input line needs "query" and "candidates" ({"A": ..., "B": ..., ...}); other fields are kept.
 """
 import argparse
 import json
+from pathlib import Path
 
 from .arbiter import Arbiter
 from .llm import openai_chat
@@ -15,11 +16,12 @@ def main() -> None:
     parser.add_argument("--output", required=True)
     parser.add_argument("--model", required=True)
     parser.add_argument("--base-url", default=None)
-    parser.add_argument("--rounds", type=int, default=1, help="passes over all orders of the candidates")
-    parser.add_argument("--temperature", type=float, default=0.0, help="sampling temperature of the reader")
+    parser.add_argument("--temperature", type=float, default=0.0)
     args = parser.parse_args()
+    if Path(args.input).resolve() == Path(args.output).resolve():
+        parser.error("input and output must be different files")
 
-    arbiter = Arbiter(openai_chat(args.model, args.base_url, temperature=args.temperature), rounds=args.rounds)
+    arbiter = Arbiter(openai_chat(args.model, args.base_url, temperature=args.temperature))
     with open(args.input, encoding="utf-8") as fin, open(args.output, "w", encoding="utf-8") as fout:
         for line in fin:
             if not line.strip():
@@ -27,7 +29,7 @@ def main() -> None:
             case = json.loads(line)
             try:
                 case["arbitration"] = arbiter(case["query"], case["candidates"]).to_dict()
-            except Exception as error:  # keep the batch going; the failure is recorded with the case
+            except Exception as error:  # record a failed case and continue the batch
                 case["arbitration"] = {"error": repr(error)}
             fout.write(json.dumps(case, ensure_ascii=False) + "\n")
             fout.flush()

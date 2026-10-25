@@ -1,14 +1,10 @@
-"""Units: the query and every candidate split into numbered sentences, deterministically.
-
-No model rewrites the sources, so every reference to a source is a reference to its own words, and
-two readings of the same case refer to the same units.
-"""
+"""Sentence splitting and source IDs."""
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
 
-QUERY = "query"  # source label of the query's own units, which are numbered Q1, Q2, ...
+QUERY = "query"  # Query units: Q1, Q2, ...
 
 _MARKER = re.compile(r"^\s*(?:[-*•]+|#+|\d+[.)])\s+")  # list bullets, headings, enumerations
 _END = re.compile(r"[.!?]+[\"')\]]*(?=\s+[\"'(\[]?[A-Z0-9])|[。！？]+")  # . ! ? before a capital; CJK stops
@@ -38,7 +34,7 @@ def segment(text: str) -> list[str]:
 
 
 def number(query: str, candidates: dict[str, str]) -> dict[str, Unit]:
-    """Units of the query (Q1, Q2, ...) and of each candidate (A1, A2, ..., or label.1 if the label ends in a digit)."""
+    """Assign query and source sentence IDs."""
     if QUERY in candidates or "Q" in candidates:
         raise ValueError(f"the candidate labels {QUERY!r} and 'Q' are reserved for the query")
     units = {}

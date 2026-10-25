@@ -1,34 +1,101 @@
-"""The reading prompt, the only one the method uses."""
+"""Prompts for reading structural residuals."""
 from __future__ import annotations
 
-from .units import QUERY, Unit
+import json
+from typing import TYPE_CHECKING
 
-READ = """Read the candidate answers below as an arbiter must before combining them: record what each numbered unit says about the query, without judging who is right.
+from .units import Unit
 
+if TYPE_CHECKING:
+    from .reading import Claim
+
+
+INNOVATION = """Read only the current source as evidence for what that source says about the query.
+The prediction is a structural hypothesis, not evidence or a preferred answer.
+Identify its innovations directly from the current original text. Return edit operations,
+not a complete current-source graph followed by a computed difference. Do not choose a winner.
+
+Query context (not source evidence):
+{query}
+
+Current source {source}, numbered original units:
 {units}
 
-Return the reading in three fields.
+Predicted structure (all entries await confirmation from the current source):
+{prediction}
 
-"claims": the distinct propositions that the units put forward on this query, in the order an answer should present them, beginning with those that answer the query. Write each as a source-neutral clause that could follow "that": keep the candidates' own wording and numbers, and leave out who says it and any condition under which it holds. Units of different candidates that say the same thing share one claim. Every claim must be taken up by some stance; add no claim that no unit makes.
+Return only a JSON object with four fields:
+  "keep": {{"predicted_id": ["current_unit_id", "another_current_unit_id"]}},
+  "drop": ["predicted_id"],
+  "replace": {{"predicted_id": complete_claim}},
+  "add": [complete_claim]
 
-"stances": for every unit that bears on the query, the claims it counts for ("+") or against ("-"). A unit counts for the claims it states, caveats and limitations included, and against the claims it disputes; a fact also counts for or against the conclusion its candidate draws from it. If the unit takes a stance only under some circumstance (a condition, threshold, scope or prerequisite), give that circumstance in "if" as a plain clause and the polarity the unit takes under it; otherwise "if" is null. For example, "If costs exceed the budget, do not hire" counts against "the clinic should hire a second nurse" with "if": "costs exceed the budget", and makes no claim that costs exceed the budget. A unit that bears on nothing under this query has no stance, and units of the query take stances only on what the query itself asserts.
+Every predicted identifier must occur exactly once across keep, drop, and replace.
+For an empty prediction, keep and replace are empty objects, drop is empty, and all
+relevant assertions go in add. Use no identifiers outside the prediction as edit keys.
 
-"alternatives": groups of rival answers to the query: courses of action or verdicts of which only one can be followed or be true (e.g. renting the space and buying it). Facts, evidence and caveats are not alternatives.
+Operations:
+- KEEP only when the current source supports the entire predicted meaning, including
+  target, polarity, scope, condition, and the full meaning of text. Equivalent wording
+  is allowed. Supply fresh
+  current-source anchors; never retain a claim merely because the prediction contains it.
+- DROP when that predicted assertion is not stated by the current source. Silence is
+  not denial. A dropped assertion adds no negative stance to the current source.
+- REPLACE when a corresponding assertion changes its target, polarity, scope, condition,
+  or condition attachment. Supply the complete current claim and its current anchors.
+  Do not return a fragment such as "different condition" or silently inherit old fields.
+- ADD assertions absent from the prediction, including extra positions on an existing
+  target. A source may make conflicting assertions: preserve both instead of reconciling
+  them. Do not force genuinely new content into an existing predicted claim.
 
-Relations depend on the query: two units can be alternatives under one query and compatible under another.
+A complete claim has exactly these fields:
+{{"target": "the proposition", "polarity": "+", "scope": "",
+ "condition": null, "text": "the full assertion", "units": ["current_unit_id"]}}
 
-Return only JSON:
-{{"claims": [{{"id": "c1", "text": "..."}}],
- "stances": [{{"unit": "A1", "claim": "c1", "polarity": "+", "if": null}}],
- "alternatives": [["c1", "c2"]]}}"""
+Preserve the original language and these distinctions:
+- target retains the subject, modality, quantities, and quantifier scope. Reuse a
+  predicted target only when its meaning is equivalent; sharing a topic is insufficient.
+  It must contain all assertion logic not represented by scope or condition, including
+  causal links and linked choices; those meanings cannot appear only in text.
+  When that meaning is unchanged, copy the predicted target string exactly, even if
+  the current source paraphrases it or changes its attached condition or scope.
+  polarity is "+" for asserting that target and "-" for explicitly denying it.
+  Keep inner negation in the target when moving it would change modal or quantifier
+  scope: "must not launch" is not simply the denial of "must launch".
+- scope records stated time, population, and other applicability limits; use "" when
+  none is stated. Keep each limit attached to the assertion it actually qualifies.
+- condition is null when no condition is stated, not a claim of universal applicability.
+  Otherwise use {{"kind": "if|only_if|iff|unless|when|complex", "text": "original qualifier wording"}}.
+  Choose one kind. "if C, P" makes C sufficient for the signed proposition P;
+  "P only if C" makes C necessary for that signed proposition, including when polarity
+  is "-". Preserve necessity versus sufficiency and negation within the condition.
+  Conditions describe contingencies, not facts that have already happened.
+- Preserve compound conditions, causal links, and either/or statements with their
+  original wording and attachment. Use complex for conditions whose logic would be
+  distorted by a simpler kind; do not invent separate facts or select one alternative.
+- text gives a complete, faithful statement, including qualifiers and linked clauses;
+  it need not be a verbatim quotation. Original wording remains available through units.
+  Do not put additional independent assertions in text without representing them in
+  the structural fields or as separate claims.
+  units must be a nonempty list of current-source unit identifiers supporting that
+  whole assertion. Several assertions may share a unit; one assertion may span units.
+  The query and the prediction cannot supply an anchor or establish a source assertion.
+
+Read all current-source units once more for relevant content the prediction does not
+contain. Capture that content through add or a complete replacement. Leave out only
+material unrelated to the query. Return no explanations or final answer."""
 
 
-def read(units: dict[str, Unit], order: list[str]) -> str:
-    """The units grouped by source: the query first, then the candidates in the given order."""
-    blocks: dict[str, list[str]] = {}
-    for u in units.values():
-        blocks.setdefault(u.source, []).append(f"[{u.id}] {u.text}")
-    listed = "\n\n".join(
-        ("Query:" if s == QUERY else f"Candidate {s}:") + "\n" + "\n".join(blocks[s]) for s in [QUERY, *order] if s in blocks
+def innovation_prompt(
+    query: str, source: str, units: dict[str, Unit], prediction: dict[str, Claim]
+) -> str:
+    """Format current source units and the prediction."""
+    predicted = {claim_id: claim.to_dict() for claim_id, claim in prediction.items()}
+    for claim in predicted.values():
+        claim.pop("units", None)
+    return INNOVATION.format(
+        query=query,
+        source=json.dumps(source, ensure_ascii=False),
+        units="\n".join(f"[{u.id}] {u.text}" for u in units.values() if u.source == source),
+        prediction=json.dumps(predicted, ensure_ascii=False, indent=2),
     )
-    return READ.format(units=listed)

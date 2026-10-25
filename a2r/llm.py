@@ -1,11 +1,11 @@
-"""Any OpenAI-compatible chat endpoint (OpenAI, vLLM, DeepSeek, Qwen, ...)."""
+"""OpenAI-compatible model adapter."""
 from __future__ import annotations
 
 from .arbiter import LLM
 
 
 def openai_chat(model: str, base_url: str | None = None, api_key: str | None = None, temperature: float | None = 0.0) -> LLM:
-    """The returned callable keeps running token totals in `chat.usage`; the arbiter reports per-case deltas."""
+    """Return a reader with cumulative token usage."""
     from openai import OpenAI
 
     client = OpenAI(base_url=base_url, api_key=api_key)
